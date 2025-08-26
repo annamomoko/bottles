@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stone vs Plastic Trainer with Save/Load (Fixed)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+  <style>
+    video, canvas { border:1px solid #ccc; margin:5px; }
+    button { margin:5px; padding:10px; }
+  </style>
+</head>
+<body>
+  <h2>Stone vs Plastic Detector (Train, Save & Load)</h2>
+
+  <video id="webcam" autoplay playsinline width="224" height="224"></video>
+  <div>
+    <button onclick="addExample('stone')">Add Stone</button>
+    <button onclick="addExample('plastic')">Add Plastic</button>
+    <button onclick="saveModel()">💾 Save Model</button>
+    <input type="file" id="loadFile" onchange="loadModel(event)">
+
+
+  </div>
+  <p id="status">Loading model...</p>
+  <p id="prediction">Prediction: -</p>
+
+  <script>
+    let net;
+    const classifier = knnClassifier.create();
+    const webcamEl = document.getElementById('webcam');
+
+    async function setupWebcam() {
+      return new Promise((resolve, reject) => {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            webcamEl.srcObject = stream;
+            webcamEl.addEventListener('loadeddata', () => resolve(), false);
+          }).catch(err => reject(err));
+      });
+    }
+
+
+  //adding this
+async function loadModelFromServer() {
+  try {
+    const response = await fetch("stone-plastic-model.json"); // same folder as HTML
+    const datasetObj = await response.json();
+    const tensorObj = {};
+    Object.keys(datasetObj).forEach(key => {
+      const tensor = tf.tensor(datasetObj[key].data, datasetObj[key].shape);
+      tensorObj[key] = tensor;
+    });
+    classifier.setClassifierDataset(tensorObj);
+    document.getElementById('status').innerText = "✅ Model loaded from server!";
+  } catch (e) {
+    document.getElementById('status').innerText = "No saved model found, please train first.";
+  }
+}
+
+setupWebcam().then(async () => {
+  await app();
+  await loadModelFromServer(); // automatically try to load JSON when page starts
+});
+
+//end 
+
+
+
+    async function app() {
+      net = await mobilenet.load();
+      document.getElementById('status').innerText = "Model loaded! Add training samples or load saved model.";
+
+      while (true) {
+        if (classifier.getNumClasses() > 0) {
+          const img = tf.browser.fromPixels(webcamEl);
+          const activation = net.infer(img, 'conv_preds');
+          const result = await classifier.predictClass(activation);
+          document.getElementById('prediction').innerText =
+            `Prediction: ${result.label} (confidence: ${(result.confidences[result.label]*100).toFixed(1)}%)`;
+          img.dispose();
+        }
+        await tf.nextFrame();
+      }
+    }
+
+    async function addExample(label) {
+      const img = tf.browser.fromPixels(webcamEl);
+      const activation = net.infer(img, 'conv_preds');
+      classifier.addExample(activation, label);
+      img.dispose();
+      document.getElementById('status').innerText = 
+        `Added example for: ${label} (total ${classifier.getClassExampleCount()[label] || 0})`;
+    }
+
+    // -------- SAVE MODEL --------
+    async function saveModel() {
+      const dataset = classifier.getClassifierDataset();
+      const datasetObj = {};
+      Object.keys(dataset).forEach(key => {
+        const data = dataset[key].dataSync();
+        datasetObj[key] = {
+          data: Array.from(data),
+          shape: dataset[key].shape
+        };
+      });
+
+      const jsonStr = JSON.stringify(datasetObj);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "stone-plastic-model.json";
+      a.click();
+    }
+
+
+
+
+
+    // -------- LOAD MODEL --------
+    async function loadModel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const datasetObj = JSON.parse(e.target.result);
+        const tensorObj = {};
+        Object.keys(datasetObj).forEach(key => {
+          const tensor = tf.tensor(datasetObj[key].data, datasetObj[key].shape);
+          tensorObj[key] = tensor;
+        });
+        classifier.setClassifierDataset(tensorObj);
+        document.getElementById('status').innerText = "✅ Model loaded from file!";
+      };
+      reader.readAsText(file);
+    }
+
+    setupWebcam().then(app);
+  </script>
+</body>
+</html>
