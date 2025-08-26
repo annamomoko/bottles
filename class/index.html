@@ -59,8 +59,9 @@ async function loadModelFromServer() {
 }
 
 setupWebcam().then(async () => {
-  await app();
   await loadModelFromServer(); // automatically try to load JSON when page starts
+  await app();
+  
 });
 
 //end 
