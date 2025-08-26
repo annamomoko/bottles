@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abstract Fish Swimming</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: none;
+        }
+        
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        
+        .status {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: #ffd700;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        
+        .camera-status {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            color: #87ceeb;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">Press 'K' to scatter the fish! Or show an open palm to the camera!</div>
+    <div class="status" id="status">Fish swimming in formation</div>
+    <div class="camera-status" id="camera-status">Camera: Initializing...</div>
+    <video id="video" style="position: absolute; top: 10px; right: 10px; width: 160px; height: 120px; border: 2px solid white; border-radius: 8px; z-index: 20;"></video>
+    <canvas id="canvas"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mediapipe/0.10.3/hands.min.js"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        const cameraStatus = document.getElementById('camera-status');
+        const video = document.getElementById('video');
+        
+        // Set canvas size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Fish class
+        class Fish {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 20 + 15;
+                this.baseSpeed = Math.random() * 1.5 + 0.8;
+                this.speed = this.baseSpeed;
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetAngle = 0;
+                this.scatterAngle = 0;
+                this.color = this.generateColor();
+                this.tail = [];
+                this.maxTailLength = 8;
+                this.swimOffset = Math.random() * Math.PI * 2;
+                this.personalSpace = this.size * 3;
+                this.isScattering = false;
+                this.scatterSpeed = 0;
+            }
+            
+            generateColor() {
+                const colors = [
+                    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', 
+                    '#feca57', '#ff9ff3', '#54a0ff', '#5f27cd'
+                ];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            update(isScattered, groupAngle, allFish) {
+                // Store previous position for tail
+                this.tail.unshift({x: this.x, y: this.y});
+                if (this.tail.length > this.maxTailLength) {
+                    this.tail.pop();
+                }
+                
+                if (isScattered) {
+                    this.targetAngle = this.scatterAngle;
+                    this.speed = this.scatterSpeed;
+                    this.isScattering = true;
+                } else {
+                    if (this.isScattering) {
+                        this.speed = this.baseSpeed;
+                        this.isScattering = false;
+                    }
+                    
+                    // Natural schooling behavior
+                    let avgX = 0, avgY = 0, neighbors = 0;
+                    let separationX = 0, separationY = 0;
+                    let avgAngle = 0;
+                    
+                    // Check nearby fish for flocking behavior
+                    allFish.forEach(other => {
+                        if (other === this) return;
+                        
+                        const dx = other.x - this.x;
+                        const dy = other.y - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < this.personalSpace * 4) {
+                            neighbors++;
+                            avgX += other.x;
+                            avgY += other.y;
+                            avgAngle += other.angle;
+                            
+                            if (distance < this.personalSpace) {
+                                separationX -= dx / distance;
+                                separationY -= dy / distance;
+                            }
+                        }
+                    });
+                    
+                    if (neighbors > 0) {
+                        avgX /= neighbors;
+                        avgY /= neighbors;
+                        const cohesionAngle = Math.atan2(avgY - this.y, avgX - this.x);
+                        avgAngle /= neighbors;
+                        
+                        let separationAngle = Math.atan2(separationY, separationX);
+                        
+                        this.targetAngle = 
+                            groupAngle * 0.4 + 
+                            cohesionAngle * 0.2 + 
+                            avgAngle * 0.3 + 
+                            separationAngle * 0.1 +
+                            Math.sin(Date.now() * 0.002 + this.swimOffset) * 0.2;
+                    } else {
+                        this.targetAngle = groupAngle + Math.sin(Date.now() * 0.002 + this.swimOffset) * 0.3;
+                    }
+                }
+                
+                // Smooth angle transition
+                let angleDiff = this.targetAngle - this.angle;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                this.angle += angleDiff * (isScattered ? 0.15 : 0.08);
+                
+                // Move fish with natural swimming motion
+                const swimWave = Math.sin(Date.now() * 0.01 + this.swimOffset) * 0.3;
+                this.x += Math.cos(this.angle + swimWave) * this.speed;
+                this.y += Math.sin(this.angle + swimWave) * this.speed;
+                
+                // Wrap around screen
+                if (this.x < -50) this.x = canvas.width + 50;
+                if (this.x > canvas.width + 50) this.x = -50;
+                if (this.y < -50) this.y = canvas.height + 50;
+                if (this.y > canvas.height + 50) this.y = -50;
+            }
+            
+            draw() {
+                ctx.save();
+                
+                // Draw tail
+                for (let i = 0; i < this.tail.length; i++) {
+                    const alpha = (this.tail.length - i) / this.tail.length * 0.3;
+                    const size = this.size * (0.3 + alpha);
+                    
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.tail[i].x, this.tail[i].y, size * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.globalAlpha = 1;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Draw fish body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw fish outline
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw eye
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.3, -this.size * 0.1, this.size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.size * 0.35, -this.size * 0.1, this.size * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw fins
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = 0.7;
+                
+                // Top fin
+                ctx.beginPath();
+                ctx.moveTo(-this.size * 0.2, -this.size * 0.4);
+                ctx.lineTo(this.size * 0.2, -this.size * 0.8);
+                ctx.lineTo(this.size * 0.6, -this.size * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Bottom fin
+                ctx.beginPath();
+                ctx.moveTo(-this.size * 0.2, this.size * 0.4);
+                ctx.lineTo(this.size * 0.2, this.size * 0.8);
+                ctx.lineTo(this.size * 0.6, this.size * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Tail fin
+                ctx.beginPath();
+                ctx.moveTo(-this.size * 0.8, -this.size * 0.4);
+                ctx.lineTo(-this.size * 1.2, 0);
+                ctx.lineTo(-this.size * 0.8, this.size * 0.4);
+                ctx.lineTo(-this.size * 0.6, 0);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            scatter() {
+                this.scatterAngle = Math.random() * Math.PI * 2;
+                this.scatterSpeed = this.baseSpeed * (2 + Math.random() * 2);
+            }
+        }
+        
+        // Water splash effects
+        class WaterSplash {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.particles = [];
+                this.life = 1.0;
+                
+                // Create splash particles
+                for (let i = 0; i < 15; i++) {
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        life: 1.0,
+                        size: Math.random() * 8 + 3
+                    });
+                }
+            }
+            
+            update() {
+                this.life -= 0.03;
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.95;
+                    p.vy *= 0.95;
+                    p.life -= 0.02;
+                    p.size *= 0.98;
+                });
+                
+                this.particles = this.particles.filter(p => p.life > 0);
+                return this.life > 0;
+            }
+            
+            draw() {
+                this.particles.forEach(p => {
+                    ctx.save();
+                    ctx.globalAlpha = p.life * 0.6;
+                    ctx.fillStyle = '#87ceeb';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.globalAlpha = p.life * 0.3;
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                });
+            }
+        }
+        
+        // Ripple effect
+        class WaterRipple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.maxRadius = 150;
+                this.life = 1.0;
+            }
+            
+            update() {
+                this.radius += 4;
+                this.life = 1 - (this.radius / this.maxRadius);
+                return this.life > 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.3;
+                ctx.strokeStyle = '#87ceeb';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.globalAlpha = this.life * 0.1;
+                ctx.lineWidth = 6;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+        
+        // Create fish school
+        const fish = [];
+        const fishCount = 25;
+        const waterEffects = [];
+        
+        // Create fish in a more spread out formation
+        for (let i = 0; i < fishCount; i++) {
+            const angle = (i / fishCount) * Math.PI * 2;
+            const radius = 100 + Math.random() * 200;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            fish.push(new Fish(
+                centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * 100,
+                centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * 100
+            ));
+        }
+        
+        // Game state
+        let isScattered = false;
+        let scatterTime = 0;
+        let groupAngle = 0;
+        let lastHandDetection = 0;
+        let handDetectionCooldown = 2000; // 2 second cooldown
+        
+        // Hand detection setup
+        let handDetectionActive = false;
+        
+        // Initialize camera and hand detection
+        async function initializeCamera() {
+            try {
+                cameraStatus.textContent = 'Camera: Requesting permission...';
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 }
+                });
+                
+                video.srcObject = stream;
+                video.play();
+                
+                cameraStatus.textContent = 'Camera: Active - Show open palm to scatter fish!';
+                
+                // Simple hand detection using video analysis
+                startHandDetection();
+                
+            } catch (error) {
+                console.error('Camera access failed:', error);
+                cameraStatus.textContent = 'Camera: Access denied - Use keyboard only';
+            }
+        }
+        
+        function startHandDetection() {
+            const canvas2d = document.createElement('canvas');
+            const ctx2d = canvas2d.getContext('2d');
+            canvas2d.width = 160;
+            canvas2d.height = 120;
+            
+            function detectHand() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    ctx2d.drawImage(video, 0, 0, canvas2d.width, canvas2d.height);
+                    
+                    // Get image data for analysis
+                    const imageData = ctx2d.getImageData(0, 0, canvas2d.width, canvas2d.height);
+                    const data = imageData.data;
+                    
+                    // More precise hand detection with multiple criteria
+                    const centerX = canvas2d.width / 2;
+                    const centerY = canvas2d.height / 2;
+                    const regionSize = 30; // Smaller region for more precision
+                    
+                    let skinPixels = 0;
+                    let totalPixels = 0;
+                    let skinClusters = 0;
+                    let avgBrightness = 0;
+                    
+                    // Check multiple small regions to detect hand shape
+                    const regions = [
+                        {x: centerX, y: centerY - 10, size: 15}, // Palm center
+                        {x: centerX - 20, y: centerY, size: 10}, // Left side
+                        {x: centerX + 20, y: centerY, size: 10}, // Right side
+                        {x: centerX, y: centerY + 15, size: 12}, // Lower palm
+                        {x: centerX - 15, y: centerY - 20, size: 8}, // Upper left
+                        {x: centerX + 15, y: centerY - 20, size: 8}  // Upper right
+                    ];
+                    
+                    let validRegions = 0;
+                    
+                    regions.forEach(region => {
+                        let regionSkinPixels = 0;
+                        let regionTotalPixels = 0;
+                        let regionBrightness = 0;
+                        
+                        for (let y = region.y - region.size; y < region.y + region.size; y++) {
+                            for (let x = region.x - region.size; x < region.x + region.size; x++) {
+                                if (x >= 0 && x < canvas2d.width && y >= 0 && y < canvas2d.height) {
+                                    const i = (y * canvas2d.width + x) * 4;
+                                    const r = data[i];
+                                    const g = data[i + 1];
+                                    const b = data[i + 2];
+                                    
+                                    regionBrightness += (r + g + b) / 3;
+                                    regionTotalPixels++;
+                                    
+                                    // More strict skin tone detection
+                                    if (isStrictSkinTone(r, g, b)) {
+                                        regionSkinPixels++;
+                                        skinPixels++;
+                                    }
+                                    totalPixels++;
+                                }
+                            }
+                        }
+                        
+                        const regionSkinRatio = regionSkinPixels / regionTotalPixels;
+                        const regionAvgBrightness = regionBrightness / regionTotalPixels;
+                        
+                        // Check if this region looks like part of a hand
+                        if (regionSkinRatio > 0.4 && regionAvgBrightness > 80 && regionAvgBrightness < 200) {
+                            validRegions++;
+                        }
+                    });
+                    
+                    const overallSkinRatio = skinPixels / totalPixels;
+                    
+                    // Much stricter criteria for hand detection
+                    const isHandDetected = 
+                        validRegions >= 4 && // At least 4 regions must look like skin
+                        overallSkinRatio > 0.25 && // Overall skin ratio
+                        overallSkinRatio < 0.8; // Not too much (avoid false positives)
+                    
+                    if (isHandDetected && Date.now() - lastHandDetection > handDetectionCooldown) {
+                        triggerScatter();
+                        lastHandDetection = Date.now();
+                        cameraStatus.textContent = 'Camera: Hand detected! ✋';
+                        setTimeout(() => {
+                            cameraStatus.textContent = 'Camera: Active - Show open palm to scatter fish!';
+                        }, 1500);
+                    }
+                }
+                
+                requestAnimationFrame(detectHand);
+            }
+            
+            detectHand();
+        }
+        
+        function isStrictSkinTone(r, g, b) {
+            // Much more strict skin tone detection
+            const isBasicSkin = (r > 95 && g > 40 && b > 20 && 
+                               Math.max(r, g, b) - Math.min(r, g, b) > 15 &&
+                               Math.abs(r - g) > 15 && r > g && r > b);
+            
+            // Additional constraints to reduce false positives
+            const rRatio = r / (r + g + b);
+            const gRatio = g / (r + g + b);
+            const bRatio = b / (r + g + b);
+            
+            const isProperSkinRatio = rRatio > 0.36 && rRatio < 0.465 &&
+                                    gRatio > 0.28 && gRatio < 0.363 &&
+                                    bRatio > 0.18 && bRatio < 0.298;
+            
+            // Check for reasonable brightness
+            const brightness = (r + g + b) / 3;
+            const isGoodBrightness = brightness > 60 && brightness < 220;
+            
+            return isBasicSkin && isProperSkinRatio && isGoodBrightness;
+        }
+        
+        function triggerScatter() {
+            if (!isScattered) {
+                isScattered = true;
+                scatterTime = Date.now();
+                status.textContent = 'Fish scattered! Regrouping in 3 seconds...';
+                
+                // Scatter all fish and create water effects
+                fish.forEach(f => {
+                    f.scatter();
+                    
+                    // Create splash effects around each fish
+                    waterEffects.push(new WaterSplash(f.x, f.y));
+                    waterEffects.push(new WaterRipple(f.x, f.y));
+                });
+                
+                // Create some random splashes for dramatic effect
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        waterEffects.push(new WaterSplash(
+                            Math.random() * canvas.width,
+                            Math.random() * canvas.height
+                        ));
+                        waterEffects.push(new WaterRipple(
+                            Math.random() * canvas.width,
+                            Math.random() * canvas.height
+                        ));
+                    }, Math.random() * 500);
+                }
+            }
+        }
+        
+        // Animation loop
+        function animate() {
+            // Clear canvas completely each frame
+            ctx.fillStyle = '#1e3c72';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add subtle background gradient effect
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, 'rgba(30, 60, 114, 0.8)');
+            gradient.addColorStop(1, 'rgba(42, 82, 152, 0.8)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update group angle for natural movement
+            groupAngle += 0.005;
+            
+            // Check if scatter time is over
+            if (isScattered && Date.now() - scatterTime > 3000) {
+                isScattered = false;
+                status.textContent = 'Fish regrouping...';
+                setTimeout(() => {
+                    if (!isScattered) {
+                        status.textContent = 'Fish swimming in formation';
+                    }
+                }, 1000);
+            }
+            
+            // Update and draw fish - make sure all fish are visible
+            console.log(`Rendering ${fish.length} fish`); // Debug line
+            fish.forEach((f, index) => {
+                f.update(isScattered, groupAngle, fish);
+                f.draw();
+            });
+            
+            // Update and draw water effects
+            for (let i = waterEffects.length - 1; i >= 0; i--) {
+                if (!waterEffects[i].update()) {
+                    waterEffects.splice(i, 1);
+                } else {
+                    waterEffects[i].draw();
+                }
+            }
+            
+            // Add some bubbles for atmosphere
+            if (Math.random() < 0.1) {
+                drawBubble();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        function drawBubble() {
+            const x = Math.random() * canvas.width;
+            const y = canvas.height;
+            const size = Math.random() * 10 + 5;
+            
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#87ceeb';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'k') {
+                triggerScatter();
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Start animation and camera
+        animate();
+        initializeCamera();
+    </script>
+</body>
+</html>
