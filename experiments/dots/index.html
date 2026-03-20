@@ -224,7 +224,7 @@
     const orientationMessage = document.getElementById('orientation-message');
     
     // Initialize audio with user gesture
-    function initAudio() {
+    async function initAudio() {
       if (audioContext) return;
       
       try {
@@ -249,14 +249,14 @@
         leftGain.gain.value = 0;
         rightGain.gain.value = 0;
         
-        // Unlock iOS audio
-        if (audioContext.state === 'suspended') {
-          const emptySource = audioContext.createBufferSource();
-          emptySource.buffer = audioContext.createBuffer(1, 1, 22050);
-          emptySource.connect(audioContext.destination);
-          emptySource.start(0);
-          emptySource.stop(0.001);
-        }
+        // Unlock iOS/mobile audio: must resume() directly inside user gesture
+        await audioContext.resume();
+        
+        // Play a silent buffer to fully unlock audio on iOS Safari
+        const emptySource = audioContext.createBufferSource();
+        emptySource.buffer = audioContext.createBuffer(1, 1, 22050);
+        emptySource.connect(audioContext.destination);
+        emptySource.start(0);
         
         // Handle visibility change
         document.addEventListener('visibilitychange', () => {
@@ -265,10 +265,6 @@
             stopRightSound();
           }
         });
-        
-        if (audioContext.state !== 'running') {
-          audioContext.resume();
-        }
       } catch (e) {
         console.error('Web Audio API is not supported in this browser', e);
         alert('Sorry, audio is not supported in your browser.');
@@ -539,8 +535,8 @@
     
     // Setup event listeners
     function setupEventListeners() {
-      startButton.addEventListener('click', () => {
-        initAudio();
+      startButton.addEventListener('click', async () => {
+        await initAudio();
         startButton.classList.add('hidden');
         instructions.style.opacity = '1';
       });
@@ -556,16 +552,17 @@
           if (!audioContext) return;
           if (!leftTouching) {
             leftTouching = true;
+            // Re-resume in case context was suspended (e.g. after backgrounding on mobile)
+            if (audioContext.state === 'suspended') audioContext.resume();
             createLeftSound();
             const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
             const y = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
             leftTouchPos = { x, y };
             createRipple(leftSide, x, y);
             instructions.style.opacity = '0';
-            if (audioContext.state === 'suspended') audioContext.resume();
             updateChord();
           }
-        });
+        }, { passive: false });
       });
       
       moveEvents.forEach(event => {
@@ -576,7 +573,7 @@
             leftTouchPos = { x, y };
             updateChord();
           }
-        });
+        }, { passive: true });
       });
       
       endEvents.forEach(event => {
@@ -588,7 +585,7 @@
             stopLeftSound();
             updateChord();
           }
-        });
+        }, { passive: false });
       });
       
       // Right side events
@@ -598,16 +595,17 @@
           if (!audioContext) return;
           if (!rightTouching) {
             rightTouching = true;
+            // Re-resume in case context was suspended
+            if (audioContext.state === 'suspended') audioContext.resume();
             createRightSound();
             const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
             const y = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
             rightTouchPos = { x, y };
             createRipple(rightSide, x, y);
             instructions.style.opacity = '0';
-            if (audioContext.state === 'suspended') audioContext.resume();
             updateChord();
           }
-        });
+        }, { passive: false });
       });
       
       moveEvents.forEach(event => {
@@ -618,7 +616,7 @@
             rightTouchPos = { x, y };
             updateChord();
           }
-        });
+        }, { passive: true });
       });
       
       endEvents.forEach(event => {
@@ -630,7 +628,7 @@
             stopRightSound();
             updateChord();
           }
-        });
+        }, { passive: false });
       });
       
       window.addEventListener('resize', checkOrientation);
