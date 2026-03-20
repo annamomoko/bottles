@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Touch Harmony</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+      touch-action: none;
+      background-color: #7e5a9b;
+    }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: row;
+      position: relative;
+    }
+    #left-side, #right-side {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+    #left-side {
+      background: linear-gradient(135deg, #c47ccc 0%, #e7a9c1 100%);
+      background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23e4b7d5' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E"),
+      linear-gradient(135deg, #c47ccc 0%, #e7a9c1 100%);
+    }
+    #right-side {
+      background: linear-gradient(135deg, #9370db 0%, #7c7bf7 100%);
+      background-image: url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23b396e6' fill-opacity='0.2'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+      linear-gradient(135deg, #9370db 0%, #7c7bf7 100%);
+    }
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+      transform: scale(0);
+      pointer-events: none;
+    }
+    .instructions {
+      position: absolute;
+      width: 100%;
+      top: 20px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 18px;
+      font-weight: 300;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      pointer-events: none;
+      transition: opacity 1s;
+      letter-spacing: 1px;
+      z-index: 100;
+    }
+    /* Monument Valley inspired decorative elements */
+    .mv-shape {
+      position: absolute;
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .left-decoration {
+      width: 80px;
+      height: 80px;
+      bottom: 30px;
+      left: 30px;
+      border: 2px solid #fff;
+      transform: rotate(45deg);
+    }
+    .right-decoration {
+      width: 60px;
+      height: 60px;
+      top: 30px;
+      right: 30px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+    .center-divider {
+      position: absolute;
+      height: 100%;
+      width: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .wavy-path {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 100%;
+      background-color: rgba(255,255,255,0.15);
+    }
+    .small-tower {
+      position: absolute;
+      bottom: 10%;
+      width: 12px;
+      height: 40px;
+      background-color: rgba(255,255,255,0.2);
+      z-index: 11;
+    }
+    .left-tower {
+      left: 20%;
+      border-radius: 2px 2px 0 0;
+    }
+    .right-tower {
+      right: 20%;
+      border-radius: 2px 2px 0 0;
+    }
+    #start-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 15px 30px;
+      background: rgba(255, 255, 255, 0.85);
+      color: #7e5a9b;
+      border: none;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    #start-button:hover {
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+    .hidden {
+      display: none !important;
+    }
+    #orientation-message {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      font-size: 18px;
+      z-index: 1000;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="orientation-message" class="hidden">Please rotate your device to landscape mode for the best experience!</div>
+  <button id="start-button">Tap to Start</button>
+  <div id="instructions" class="instructions">Touch to create harmony</div>
+  <div id="game-container">
+    <div id="left-side">
+      <div class="mv-shape left-decoration"></div>
+      <div class="small-tower left-tower"></div>
+    </div>
+    <div class="center-divider">
+      <svg viewBox="0 0 60 800" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+        <path d="M30,0 
+                 Q25,100 35,200 
+                 T25,400 
+                 T35,600 
+                 T30,800" 
+              stroke="rgba(255,255,255,0.3)" 
+              stroke-width="3" 
+              fill="none" />
+      </svg>
+    </div>
+    <div id="right-side">
+      <div class="mv-shape right-decoration"></div>
+      <div class="small-tower right-tower"></div>
+    </div>
+  </div>
+
+  <script>
+    // Create audio context and oscillators
+    let audioContext;
+    let leftOscillator = null;
+    let rightOscillator = null;
+    let leftGain = null;
+    let rightGain = null;
+    
+    // For chord note and visual line
+    let chordOscillator = null;
+    let chordGain = null;
+    let chordLineSVG = null;
+    let chordLine = null;
+    let leftTouchPos = null;
+    let rightTouchPos = null;
+    
+    // Track state
+    let leftTouching = false;
+    let rightTouching = false;
+    let leftNotes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00]; // C4, D4, E4, F4, G4, A4
+    let rightNotes = [440.00, 493.88, 523.25, 587.33, 659.25, 698.46]; // A4, B4, C5, D5, E5, F5
+    let leftCurrentNote = 0;
+    let rightCurrentNote = 0;
+    
+    // Elements
+    const leftSide = document.getElementById('left-side');
+    const rightSide = document.getElementById('right-side');
+    const instructions = document.getElementById('instructions');
+    const startButton = document.getElementById('start-button');
+    const orientationMessage = document.getElementById('orientation-message');
+    
+    // Initialize audio with user gesture
+    function initAudio() {
+      if (audioContext) return;
+      
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Create stereo panner and gain nodes for left and right
+        leftGain = audioContext.createGain();
+        rightGain = audioContext.createGain();
+        
+        const leftPanner = audioContext.createStereoPanner();
+        const rightPanner = audioContext.createStereoPanner();
+        
+        leftPanner.pan.value = -1; // Full left
+        rightPanner.pan.value = 1;  // Full right
+        
+        leftGain.connect(leftPanner);
+        rightGain.connect(rightPanner);
+        
+        leftPanner.connect(audioContext.destination);
+        rightPanner.connect(audioContext.destination);
+        
+        leftGain.gain.value = 0;
+        rightGain.gain.value = 0;
+        
+        // Unlock iOS audio
+        if (audioContext.state === 'suspended') {
+          const emptySource = audioContext.createBufferSource();
+          emptySource.buffer = audioContext.createBuffer(1, 1, 22050);
+          emptySource.connect(audioContext.destination);
+          emptySource.start(0);
+          emptySource.stop(0.001);
+        }
+        
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) {
+            stopLeftSound();
+            stopRightSound();
+          }
+        });
+        
+        if (audioContext.state !== 'running') {
+          audioContext.resume();
+        }
+      } catch (e) {
+        console.error('Web Audio API is not supported in this browser', e);
+        alert('Sorry, audio is not supported in your browser.');
+      }
+    }
+    
+    // Create reverb effect (simple)
+    function createReverb(audioContext) {
+      const convolver = audioContext.createConvolver();
+      const impulseLength = 2 * audioContext.sampleRate;
+      const impulse = audioContext.createBuffer(2, impulseLength, audioContext.sampleRate);
+      
+      for (let channel = 0; channel < 2; channel++) {
+        const impulseData = impulse.getChannelData(channel);
+        for (let i = 0; i < impulseLength; i++) {
+          impulseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impulseLength, 3);
+        }
+      }
+      
+      convolver.buffer = impulse;
+      return convolver;
+    }
+    
+    // Create oscillator for left side
+    function createLeftSound() {
+      if (!audioContext) return;
+      
+      if (leftOscillator) {
+        leftOscillator.stop();
+        leftOscillator = null;
+      }
+      
+      leftOscillator = audioContext.createOscillator();
+      leftOscillator.type = 'sine';
+      leftOscillator.frequency.value = leftNotes[leftCurrentNote];
+      
+      leftGain.gain.cancelScheduledValues(audioContext.currentTime);
+      leftGain.gain.setValueAtTime(0, audioContext.currentTime);
+      leftGain.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+      
+      leftOscillator.connect(leftGain);
+      leftOscillator.start();
+      leftOscillator.detune.setValueAtTime(Math.random() * 5 - 2.5, audioContext.currentTime);
+      
+      leftCurrentNote = (leftCurrentNote + 1) % leftNotes.length;
+    }
+    
+    // Create oscillator for right side
+    function createRightSound() {
+      if (!audioContext) return;
+      
+      if (rightOscillator) {
+        rightOscillator.stop();
+        rightOscillator = null;
+      }
+      
+      rightOscillator = audioContext.createOscillator();
+      rightOscillator.type = 'triangle';
+      rightOscillator.frequency.value = rightNotes[rightCurrentNote];
+      
+      rightGain.gain.cancelScheduledValues(audioContext.currentTime);
+      rightGain.gain.setValueAtTime(0, audioContext.currentTime);
+      rightGain.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+      
+      rightOscillator.connect(rightGain);
+      rightOscillator.start();
+      rightOscillator.detune.setValueAtTime(Math.random() * 5 - 2.5, audioContext.currentTime);
+      
+      rightCurrentNote = (rightCurrentNote + 1) % rightNotes.length;
+    }
+    
+    // Stop left side sound
+    function stopLeftSound() {
+      if (leftOscillator && leftGain && audioContext) {
+        leftGain.gain.cancelScheduledValues(audioContext.currentTime);
+        leftGain.gain.setValueAtTime(leftGain.gain.value || 0.001, audioContext.currentTime);
+        leftGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+        setTimeout(() => {
+          if (leftOscillator) {
+            leftOscillator.stop();
+            leftOscillator = null;
+          }
+        }, 100);
+      }
+    }
+    
+    // Stop right side sound
+    function stopRightSound() {
+      if (rightOscillator && rightGain && audioContext) {
+        rightGain.gain.cancelScheduledValues(audioContext.currentTime);
+        rightGain.gain.setValueAtTime(rightGain.gain.value || 0.001, audioContext.currentTime);
+        rightGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+        setTimeout(() => {
+          if (rightOscillator) {
+            rightOscillator.stop();
+            rightOscillator = null;
+          }
+        }, 100);
+      }
+    }
+    
+    // Create ripple effect
+    function createRipple(element, x, y) {
+      const ripple = document.createElement('div');
+      ripple.classList.add('ripple');
+      const size = Math.max(element.offsetWidth, element.offsetHeight) * 0.8;
+      ripple.style.width = ripple.style.height = `${size}px`;
+      ripple.style.left = `${x - element.offsetLeft - size/2}px`;
+      ripple.style.top = `${y - element.offsetTop - size/2}px`;
+      element.appendChild(ripple);
+      
+      ripple.animate(
+        [
+          { transform: 'scale(0)', opacity: 0.8 },
+          { transform: 'scale(2)', opacity: 0 }
+        ],
+        {
+          duration: 1200,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }
+      ).onfinish = () => {
+        ripple.remove();
+      };
+    }
+    
+    // Ambient elements
+    function createAmbientElements() {
+      const shapes = ['circle', 'square', 'triangle'];
+      const sides = [leftSide, rightSide];
+      
+      sides.forEach(side => {
+        for (let i = 0; i < 5; i++) {
+          const floatingShape = document.createElement('div');
+          const shape = shapes[Math.floor(Math.random() * shapes.length)];
+          const size = 5 + Math.random() * 15;
+          
+          floatingShape.style.position = 'absolute';
+          floatingShape.style.width = `${size}px`;
+          floatingShape.style.height = `${size}px`;
+          floatingShape.style.backgroundColor = 'rgba(255,255,255,0.1)';
+          
+          if (shape === 'circle') {
+            floatingShape.style.borderRadius = '50%';
+          } else if (shape === 'triangle') {
+            floatingShape.style.width = '0';
+            floatingShape.style.height = '0';
+            floatingShape.style.backgroundColor = 'transparent';
+            floatingShape.style.borderLeft = `${size/2}px solid transparent`;
+            floatingShape.style.borderRight = `${size/2}px solid transparent`;
+            floatingShape.style.borderBottom = `${size}px solid rgba(255,255,255,0.1)`;
+          }
+          
+          floatingShape.style.left = `${Math.random() * 100}%`;
+          floatingShape.style.top = `${Math.random() * 100}%`;
+          floatingShape.style.pointerEvents = 'none';
+          
+          side.appendChild(floatingShape);
+          
+          const duration = 10000 + Math.random() * 20000;
+          animate();
+          function animate() {
+            const newX = Math.random() * 100;
+            const newY = Math.random() * 100;
+            floatingShape.animate(
+              [
+                { left: `${floatingShape.style.left}`, top: `${floatingShape.style.top}` },
+                { left: `${newX}%`, top: `${newY}%` }
+              ], 
+              {
+                duration: duration,
+                easing: 'ease-in-out',
+                fill: 'forwards'
+              }
+            ).onfinish = () => {
+              floatingShape.style.left = `${newX}%`;
+              floatingShape.style.top = `${newY}%`;
+              animate();
+            };
+          }
+        }
+      });
+    }
+    
+    // Update chord: if both left and right are touched, create/update a chord oscillator and draw a connecting line.
+    function updateChord() {
+      if (leftTouching && rightTouching && leftTouchPos && rightTouchPos) {
+        // Create chord oscillator and visual line if not already created
+        if (!chordOscillator) {
+          chordOscillator = audioContext.createOscillator();
+          chordOscillator.type = 'sine';
+          chordGain = audioContext.createGain();
+          chordGain.gain.setValueAtTime(0, audioContext.currentTime);
+          chordGain.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+          // Center the chord in the stereo field
+          const chordPanner = audioContext.createStereoPanner();
+          chordPanner.pan.value = 0;
+          chordGain.connect(chordPanner);
+          chordPanner.connect(audioContext.destination);
+          
+          // Compute chord frequency as the average of the two oscillators
+          let leftFreq = leftOscillator ? leftOscillator.frequency.value : leftNotes[leftCurrentNote];
+          let rightFreq = rightOscillator ? rightOscillator.frequency.value : rightNotes[rightCurrentNote];
+          chordOscillator.frequency.value = (leftFreq + rightFreq) / 2;
+          
+          chordOscillator.connect(chordGain);
+          chordOscillator.start();
+        } else {
+          // Update frequency if needed
+          if (leftOscillator && rightOscillator) {
+            let leftFreq = leftOscillator.frequency.value;
+            let rightFreq = rightOscillator.frequency.value;
+            chordOscillator.frequency.setValueAtTime((leftFreq + rightFreq) / 2, audioContext.currentTime);
+          }
+        }
+        // Create or update the line connecting the two touch points
+        if (!chordLineSVG) {
+          chordLineSVG = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          chordLineSVG.style.position = "absolute";
+          chordLineSVG.style.top = "0";
+          chordLineSVG.style.left = "0";
+          chordLineSVG.style.width = "100%";
+          chordLineSVG.style.height = "100%";
+          chordLineSVG.style.pointerEvents = "none";
+          document.getElementById('game-container').appendChild(chordLineSVG);
+          
+          chordLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          chordLine.setAttribute("stroke", "white");
+          chordLine.setAttribute("stroke-width", "3");
+          chordLineSVG.appendChild(chordLine);
+        }
+        chordLine.setAttribute("x1", leftTouchPos.x);
+        chordLine.setAttribute("y1", leftTouchPos.y);
+        chordLine.setAttribute("x2", rightTouchPos.x);
+        chordLine.setAttribute("y2", rightTouchPos.y);
+      } else {
+        // If either touch is lost, remove chord oscillator and visual line
+        if (chordOscillator) {
+          chordGain.gain.cancelScheduledValues(audioContext.currentTime);
+          chordGain.gain.setValueAtTime(chordGain.gain.value, audioContext.currentTime);
+          chordGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+          setTimeout(() => {
+            if (chordOscillator) {
+              chordOscillator.stop();
+              chordOscillator = null;
+            }
+          }, 100);
+          chordGain = null;
+        }
+        if (chordLineSVG) {
+          chordLineSVG.remove();
+          chordLineSVG = null;
+          chordLine = null;
+        }
+      }
+    }
+    
+    // Orientation check
+    function checkOrientation() {
+      const isLandscape = window.innerWidth > window.innerHeight;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile && !isLandscape) {
+        orientationMessage.classList.remove('hidden');
+      } else {
+        orientationMessage.classList.add('hidden');
+      }
+    }
+    
+    // Setup event listeners
+    function setupEventListeners() {
+      startButton.addEventListener('click', () => {
+        initAudio();
+        startButton.classList.add('hidden');
+        instructions.style.opacity = '1';
+      });
+      
+      const startEvents = ['mousedown', 'touchstart'];
+      const moveEvents = ['mousemove', 'touchmove'];
+      const endEvents = ['mouseup', 'mouseleave', 'touchend', 'touchcancel'];
+      
+      // Left side events
+      startEvents.forEach(event => {
+        leftSide.addEventListener(event, e => {
+          e.preventDefault();
+          if (!audioContext) return;
+          if (!leftTouching) {
+            leftTouching = true;
+            createLeftSound();
+            const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const y = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            leftTouchPos = { x, y };
+            createRipple(leftSide, x, y);
+            instructions.style.opacity = '0';
+            if (audioContext.state === 'suspended') audioContext.resume();
+            updateChord();
+          }
+        });
+      });
+      
+      moveEvents.forEach(event => {
+        leftSide.addEventListener(event, e => {
+          if (leftTouching) {
+            const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const y = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            leftTouchPos = { x, y };
+            updateChord();
+          }
+        });
+      });
+      
+      endEvents.forEach(event => {
+        leftSide.addEventListener(event, e => {
+          e.preventDefault();
+          if (leftTouching) {
+            leftTouching = false;
+            leftTouchPos = null;
+            stopLeftSound();
+            updateChord();
+          }
+        });
+      });
+      
+      // Right side events
+      startEvents.forEach(event => {
+        rightSide.addEventListener(event, e => {
+          e.preventDefault();
+          if (!audioContext) return;
+          if (!rightTouching) {
+            rightTouching = true;
+            createRightSound();
+            const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const y = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            rightTouchPos = { x, y };
+            createRipple(rightSide, x, y);
+            instructions.style.opacity = '0';
+            if (audioContext.state === 'suspended') audioContext.resume();
+            updateChord();
+          }
+        });
+      });
+      
+      moveEvents.forEach(event => {
+        rightSide.addEventListener(event, e => {
+          if (rightTouching) {
+            const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const y = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            rightTouchPos = { x, y };
+            updateChord();
+          }
+        });
+      });
+      
+      endEvents.forEach(event => {
+        rightSide.addEventListener(event, e => {
+          e.preventDefault();
+          if (rightTouching) {
+            rightTouching = false;
+            rightTouchPos = null;
+            stopRightSound();
+            updateChord();
+          }
+        });
+      });
+      
+      window.addEventListener('resize', checkOrientation);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (leftTouching) {
+            leftTouching = false;
+            leftTouchPos = null;
+            stopLeftSound();
+          }
+          if (rightTouching) {
+            rightTouching = false;
+            rightTouchPos = null;
+            stopRightSound();
+          }
+          updateChord();
+        }
+      });
+      window.addEventListener('orientationchange', checkOrientation);
+    }
+    
+    // Initialize
+    function init() {
+      setupEventListeners();
+      createAmbientElements();
+      checkOrientation();
+    }
+    
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
