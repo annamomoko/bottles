@@ -1,0 +1,507 @@
+<html><head><style>
+*{box-sizing:border-box;margin:0;padding:0}
+#app{display:flex;flex-direction:column;height:640px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+#toolbar{display:flex;align-items:center;gap:7px;padding:9px 12px;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);flex-wrap:wrap}
+.logo{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-right:2px}
+.tb-btn{font-size:12px;padding:5px 11px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);cursor:pointer;transition:background 0.12s}
+.tb-btn:hover{background:var(--color-background-secondary)}
+.tb-btn.active{background:#EEEDFE;color:#3C3489;border-color:#AFA9EC}
+.tb-btn.play{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
+.tb-btn.stop{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+.tb-btn.dl{background:#E6F1FB;color:#185FA5;border-color:#85B7EB}
+.tb-btn.save{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.sep{width:1px;height:20px;background:var(--color-border-tertiary);margin:0 2px}
+#hint{font-size:11px;color:var(--color-text-tertiary);margin-left:auto;white-space:nowrap}
+#canvas-wrap{position:relative;flex:1;overflow:hidden}
+#bg-canvas,#main-canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+#node-editor{position:absolute;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:12px 14px;display:none;z-index:10;min-width:205px}
+#node-editor label{font-size:12px;color:var(--color-text-secondary);display:block;margin-bottom:3px}
+#node-editor select,#node-editor input{width:100%;margin-bottom:9px;font-size:13px}
+.ed-row{display:flex;gap:8px}
+.ed-row button{flex:1;font-size:12px;padding:5px 0;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);cursor:pointer}
+.ed-row button.del{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+#status{position:absolute;bottom:8px;left:12px;font-size:11px;color:var(--color-text-tertiary)}
+</style>
+
+<script>window.__SAVED_PATTERN__="{\"nodes\":[{\"id\":\"n1\",\"x\":110,\"y\":210,\"r\":30,\"note\":\"C\",\"octave\":4,\"dur\":1,\"label\":\"start\"},{\"id\":\"n2\",\"x\":317,\"y\":125,\"r\":22,\"note\":\"E\",\"octave\":4,\"dur\":0.5,\"label\":\"\"},{\"id\":\"n3\",\"x\":276,\"y\":362,\"r\":40,\"note\":\"G\",\"octave\":4,\"dur\":2,\"label\":\"\"},{\"id\":\"n4\",\"x\":393,\"y\":284,\"r\":22,\"note\":\"A\",\"octave\":4,\"dur\":0.5,\"label\":\"\"},{\"id\":\"n5\",\"x\":444,\"y\":165,\"r\":22,\"note\":\"F\",\"octave\":4,\"dur\":0.5,\"label\":\"\"},{\"id\":\"n6\",\"x\":509,\"y\":244,\"r\":30,\"note\":\"D#\",\"octave\":5,\"dur\":1,\"label\":\"end\"},{\"id\":\"n1777004144543\",\"x\":816,\"y\":110,\"r\":30,\"note\":\"A\",\"octave\":3,\"dur\":1,\"label\":\"\"},{\"id\":\"n1777004145953\",\"x\":856,\"y\":181,\"r\":16,\"note\":\"F#\",\"octave\":3,\"dur\":0.25,\"label\":\"\"},{\"id\":\"n1777004146570\",\"x\":925,\"y\":75,\"r\":22,\"note\":\"G\",\"octave\":3,\"dur\":0.5,\"label\":\"\"},{\"id\":\"n1777004147055\",\"x\":962,\"y\":195,\"r\":30,\"note\":\"A#\",\"octave\":3,\"dur\":1,\"label\":\"\"},{\"id\":\"n1777004294803\",\"x\":759,\"y\":401,\"r\":30,\"note\":\"G\",\"octave\":4,\"dur\":1,\"label\":\"\"},{\"id\":\"n1777004302252\",\"x\":880,\"y\":405,\"r\":22,\"note\":\"B\",\"octave\":4,\"dur\":0.5,\"label\":\"\"},{\"id\":\"n1777004302787\",\"x\":905,\"y\":527,\"r\":30,\"note\":\"D\",\"octave\":4,\"dur\":1,\"label\":\"\"},{\"id\":\"n1777004303238\",\"x\":774,\"y\":524,\"r\":40,\"note\":\"D#\",\"octave\":4,\"dur\":2,\"label\":\"\"}],\"edges\":[{\"from\":\"n1\",\"to\":\"n2\"},{\"from\":\"n1\",\"to\":\"n3\"},{\"from\":\"n2\",\"to\":\"n1\"},{\"from\":\"n2\",\"to\":\"n4\"},{\"from\":\"n3\",\"to\":\"n4\"},{\"from\":\"n4\",\"to\":\"n5\"},{\"from\":\"n4\",\"to\":\"n6\"},{\"from\":\"n5\",\"to\":\"n5\"},{\"from\":\"n5\",\"to\":\"n1\"},{\"from\":\"n6\",\"to\":\"n1\"},{\"from\":\"n1777004144543\",\"to\":\"n1777004146570\"},{\"from\":\"n1777004146570\",\"to\":\"n1777004147055\"},{\"from\":\"n1777004147055\",\"to\":\"n1777004145953\"},{\"from\":\"n1777004145953\",\"to\":\"n1777004146570\"},{\"from\":\"n1777004144543\",\"to\":\"n1777004147055\"},{\"from\":\"n1777004147055\",\"to\":\"n1777004144543\"},{\"from\":\"n1777004145953\",\"to\":\"n1777004144543\"},{\"from\":\"n1777004144543\",\"to\":\"n1777004145953\"},{\"from\":\"n1777004145953\",\"to\":\"n1777004147055\"},{\"from\":\"n5\",\"to\":\"n1777004144543\"},{\"from\":\"n1777004294803\",\"to\":\"n1777004302252\"},{\"from\":\"n1777004302252\",\"to\":\"n1777004302787\"},{\"from\":\"n1777004302787\",\"to\":\"n1777004303238\"},{\"from\":\"n1777004303238\",\"to\":\"n1777004294803\"},{\"from\":\"n1777004294803\",\"to\":\"n1777004302787\"},{\"from\":\"n1777004302252\",\"to\":\"n1777004303238\"},{\"from\":\"n1777004302252\",\"to\":\"n1777004302252\"},{\"from\":\"n1777004302252\",\"to\":\"n1777004294803\"},{\"from\":\"n1777004302787\",\"to\":\"n1777004302252\"},{\"from\":\"n1777004145953\",\"to\":\"n1777004294803\"},{\"from\":\"n1777004303238\",\"to\":\"n3\"},{\"from\":\"n4\",\"to\":\"n1777004294803\"}]}";</script></head><body><div id="app">
+  <div id="toolbar">
+    <span class="logo">Markov Music</span>
+    <button class="tb-btn" id="btn-add">+ Node</button>
+    <button class="tb-btn active" id="btn-connect">Connect</button>
+    <button class="tb-btn" id="btn-delete-mode">Delete</button>
+    <div class="sep"></div>
+    <button class="tb-btn play" id="btn-play">▶ Play</button>
+    <button class="tb-btn stop" id="btn-stop">■ Stop</button>
+    <button class="tb-btn dl" id="btn-dl">↓ MIDI</button>
+    <div class="sep"></div>
+    <button class="tb-btn save" id="btn-save">☐ Save Pattern</button>
+    <span id="hint">Click a node, then another (or same) to connect</span>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="bg-canvas" width="1470" height="597"></canvas>
+    <canvas id="main-canvas" width="1470" height="597" style="cursor: crosshair;"></canvas>
+    <div id="node-editor" style="left: 882px; top: 160.5px; display: none;">
+      <label>Note</label><select id="ed-note"><option value="C">C</option><option value="C#">C#</option><option value="D">D</option><option value="D#">D#</option><option value="E">E</option><option value="F">F</option><option value="F#">F#</option><option value="G">G</option><option value="G#">G#</option><option value="A">A</option><option value="A#">A#</option><option value="B">B</option></select>
+      <label>Octave</label><select id="ed-oct"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select>
+      <label>Duration</label>
+      <select id="ed-dur">
+        <option value="0.25">16th — tiny</option>
+        <option value="0.5">8th — small</option>
+        <option value="1" selected="">Quarter — medium</option>
+        <option value="2">Half — large</option>
+        <option value="4">Whole — huge</option>
+      </select>
+      <label>Label</label>
+      <input id="ed-label" type="text" placeholder="optional" maxlength="12">
+      <div class="ed-row">
+        <button id="ed-ok">OK</button>
+        <button id="ed-del" class="del">Delete Node</button>
+      </div>
+    </div>
+    <div id="status">MIDI downloaded — 64 notes</div>
+  </div>
+</div>
+
+<script>
+(function(){
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const NOTE_COLORS={C:'#7F77DD','C#':'#534AB7',D:'#1D9E75','D#':'#0F6E56',E:'#D85A30',F:'#D4537E','F#':'#993556',G:'#378ADD','G#':'#185FA5',A:'#639922','A#':'#3B6D11',B:'#BA7517'};
+const PLAY_COL='#E24B4A';
+const DUR_R={0.25:16,0.5:22,1:30,2:40,4:52};
+const OFFSET=9,ARROW_SZ=7,EDGE_HIT=8;
+
+function durR(d){return DUR_R[d]||30;}
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let audioCtx=null;
+function getAudioCtx(){
+  if(!audioCtx||audioCtx.state==='closed') audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function noteToFreq(note,octave){
+  return 440*Math.pow(2,(NOTE_NAMES.indexOf(note)+12*(octave+1)-69)/12);
+}
+function playNote(freq,durSec){
+  const ac=getAudioCtx();
+  const osc=ac.createOscillator(),gain=ac.createGain();
+  osc.connect(gain);gain.connect(ac.destination);
+  osc.type='triangle';osc.frequency.setValueAtTime(freq,ac.currentTime);
+  gain.gain.setValueAtTime(0.001,ac.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.35,ac.currentTime+0.02);
+  gain.gain.exponentialRampToValueAtTime(0.18,ac.currentTime+Math.min(0.12,durSec*0.4));
+  gain.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+durSec*0.88);
+  osc.start(ac.currentTime);osc.stop(ac.currentTime+durSec);
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let nodes=[],edges=[],mode='add',playing=false,playTimer=null;
+let connectFrom=null,currentNode=null,hoverNode=null,hoverEdge=null;
+let mouseX=0,mouseY=0,dragging=null,dragOffX=0,dragOffY=0;
+let playHead=null,stepCount=0,maxSteps=64,tempo=120;
+
+const wrap=document.getElementById('canvas-wrap');
+const bgC=document.getElementById('bg-canvas');
+const mc=document.getElementById('main-canvas');
+const bgCtx=bgC.getContext('2d');
+const ctx=mc.getContext('2d');
+const editor=document.getElementById('node-editor');
+const edNote=document.getElementById('ed-note');
+const edOct=document.getElementById('ed-oct');
+const edDur=document.getElementById('ed-dur');
+const edLabel=document.getElementById('ed-label');
+const statusEl=document.getElementById('status');
+const hintEl=document.getElementById('hint');
+
+NOTE_NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;edNote.appendChild(o);});
+[2,3,4,5,6].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===4)o.selected=true;edOct.appendChild(o);});
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+function resize(){
+  const r=wrap.getBoundingClientRect();
+  [bgC,mc].forEach(c=>{c.width=r.width;c.height=r.height;});
+  drawBg();draw();
+}
+function drawBg(){
+  bgCtx.clearRect(0,0,bgC.width,bgC.height);
+  bgCtx.fillStyle='rgba(127,119,221,0.04)';
+  for(let x=0;x<bgC.width;x+=28)for(let y=0;y<bgC.height;y+=28){
+    bgCtx.beginPath();bgCtx.arc(x,y,1.1,0,Math.PI*2);bgCtx.fill();
+  }
+}
+
+// ── Hit testing ───────────────────────────────────────────────────────────────
+function nodeAt(x,y){
+  for(let i=nodes.length-1;i>=0;i--){
+    if(Math.hypot(x-nodes[i].x,y-nodes[i].y)<=nodes[i].r) return nodes[i];
+  }return null;
+}
+function outEdges(id){return edges.filter(e=>e.from===id);}
+function hasBoth(a,b){return edges.some(e=>e.from===a&&e.to===b)&&edges.some(e=>e.from===b&&e.to===a);}
+
+function edgeGeom(e){
+  const from=nodes.find(n=>n.id===e.from),to=nodes.find(n=>n.id===e.to);
+  if(!from||!to) return null;
+  if(from.id===to.id){
+    const lx=from.x-from.r*0.3,ty=from.y-from.r,loopR=from.r*0.55;
+    return {selfLoop:true,lx,ty,loopR,from};
+  }
+  const dx=to.x-from.x,dy=to.y-from.y,dist=Math.hypot(dx,dy);
+  if(dist<1) return null;
+  const ux=dx/dist,uy=dy/dist,nx=-uy,ny=ux;
+  const off=hasBoth(from.id,to.id)?OFFSET:0;
+  const sx=from.x+ux*from.r+nx*off,sy=from.y+uy*from.r+ny*off;
+  const ex=to.x-ux*(to.r+ARROW_SZ+1)+nx*off,ey=to.y-uy*(to.r+ARROW_SZ+1)+ny*off;
+  return {selfLoop:false,sx,sy,ex,ey,nx,ny,from,to};
+}
+
+function ptSegDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,lenSq=dx*dx+dy*dy;
+  if(lenSq===0) return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/lenSq));
+  return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+
+function edgeAt(x,y){
+  if(nodeAt(x,y)) return null;
+  for(let i=edges.length-1;i>=0;i--){
+    const g=edgeGeom(edges[i]);if(!g) continue;
+    if(g.selfLoop){
+      if(Math.abs(Math.hypot(x-g.lx,y-g.ty)-g.loopR)<EDGE_HIT) return edges[i];
+    } else {
+      if(ptSegDist(x,y,g.sx,g.sy,g.ex,g.ey)<EDGE_HIT) return edges[i];
+    }
+  }
+  return null;
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function drawArrowhead(x,y,angle,col,sz){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-sz,-sz*0.45);ctx.lineTo(-sz,sz*0.45);ctx.closePath();
+  ctx.fillStyle=col;ctx.fill();ctx.restore();
+}
+function edgeCol(e){
+  if(e.highlight) return PLAY_COL;
+  if(hoverEdge===e&&mode==='delete-mode') return '#E24B4A';
+  if(hoverEdge===e) return 'rgba(127,119,221,0.9)';
+  return 'rgba(127,119,221,0.5)';
+}
+function drawEdge(e){
+  const g=edgeGeom(e);if(!g) return;
+  const col=edgeCol(e),lw=(e.highlight||hoverEdge===e)?2.5:1.5;
+  const outs=outEdges(g.from.id);
+  const prob=outs.length>1?Math.round(100/outs.length):null;
+
+  if(g.selfLoop){
+    ctx.beginPath();ctx.arc(g.lx,g.ty,g.loopR,0.3,Math.PI*1.85,false);
+    ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.stroke();
+    const ex=g.lx+g.loopR*Math.cos(Math.PI*1.85);
+    const ey=g.ty+g.loopR*Math.sin(Math.PI*1.85);
+    drawArrowhead(ex,ey,Math.PI*1.85+Math.PI*0.5+0.3,col,ARROW_SZ);
+    if(mode==='delete-mode'&&hoverEdge===e){
+      ctx.fillStyle='#E24B4A';ctx.font='bold 13px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('×',g.lx,g.ty-g.loopR-4);
+    }
+    if(prob){
+      ctx.fillStyle='var(--color-text-secondary)';ctx.font='10px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(prob+'%',g.lx-g.loopR-8,g.ty);
+    }
+    return;
+  }
+  ctx.beginPath();ctx.moveTo(g.sx,g.sy);ctx.lineTo(g.ex,g.ey);
+  ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.stroke();
+  drawArrowhead(g.ex,g.ey,Math.atan2(g.ey-g.sy,g.ex-g.sx),col,ARROW_SZ);
+  if(mode==='delete-mode'&&hoverEdge===e){
+    const mx=(g.sx+g.ex)/2,my=(g.sy+g.ey)/2;
+    ctx.fillStyle='#E24B4A';ctx.font='bold 13px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('×',mx+g.nx*12,my+g.ny*12);
+  }
+  if(prob){
+    const mx=(g.sx+g.ex)/2,my=(g.sy+g.ey)/2;
+    ctx.fillStyle='var(--color-text-secondary)';ctx.font='10px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(prob+'%',mx+g.nx*14,my+g.ny*14-2);
+  }
+}
+function drawNode(n){
+  const isPlay=playHead===n.id,isHov=hoverNode===n.id;
+  const col=NOTE_COLORS[n.note]||'#7F77DD',r=n.r;
+  if(isPlay){ctx.beginPath();ctx.arc(n.x,n.y,r+5,0,Math.PI*2);ctx.fillStyle='rgba(226,75,74,0.15)';ctx.fill();}
+  ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+  ctx.fillStyle=isPlay?PLAY_COL:col;ctx.globalAlpha=0.15;ctx.fill();ctx.globalAlpha=1;
+  ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+  ctx.fillStyle=isPlay?PLAY_COL:col;ctx.globalAlpha=0.82;ctx.fill();ctx.globalAlpha=1;
+  ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+  ctx.strokeStyle=isPlay?'#A32D2D':(isHov?'rgba(255,255,255,0.9)':col);
+  ctx.lineWidth=isPlay?2.5:1.5;ctx.stroke();
+  ctx.fillStyle='#fff';
+  ctx.font=`bold ${Math.max(10,Math.round(r*0.42))}px sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(n.note+n.octave,n.x,n.y);
+  if(n.label){ctx.fillStyle=isPlay?PLAY_COL:col;ctx.font='10px sans-serif';ctx.textBaseline='top';ctx.fillText(n.label,n.x,n.y+r+3);}
+  if(mode==='delete-mode'){
+    ctx.fillStyle='#E24B4A';ctx.font='bold 14px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('×',n.x+r-5,n.y-r);
+  }
+}
+function draw(){
+  ctx.clearRect(0,0,mc.width,mc.height);
+  edges.forEach(drawEdge);
+  if(mode==='connect'&&connectFrom){
+    const from=nodes.find(n=>n.id===connectFrom);
+    if(from){
+      ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(mouseX,mouseY);
+      ctx.strokeStyle='rgba(209,81,48,0.35)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+  nodes.forEach(drawNode);
+}
+
+// ── Mouse ─────────────────────────────────────────────────────────────────────
+mc.addEventListener('mousemove',e=>{
+  const r=mc.getBoundingClientRect();mouseX=e.clientX-r.left;mouseY=e.clientY-r.top;
+  if(dragging){dragging.x=mouseX+dragOffX;dragging.y=mouseY+dragOffY;draw();return;}
+  const n=nodeAt(mouseX,mouseY);
+  hoverNode=n?n.id:null;
+  hoverEdge=(!n&&mode==='delete-mode')?edgeAt(mouseX,mouseY):null;
+  mc.style.cursor=n?'pointer':(hoverEdge?'pointer':'crosshair');
+  draw();
+});
+mc.addEventListener('mousedown',e=>{
+  if(e.button!==0) return;
+  const r=mc.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  const n=nodeAt(x,y);
+  if(mode==='add'){
+    if(n){dragging=n;dragOffX=n.x-x;dragOffY=n.y-y;return;}
+    nodes.push({id:'n'+Date.now(),x,y,r:durR(1),note:'C',octave:4,dur:1,label:''});
+    draw();setStatus('Node added — double-click to edit');
+  } else if(mode==='connect'){
+    if(n){
+      if(!connectFrom){connectFrom=n.id;setStatus('Click target node (same = self-loop)');}
+      else{
+        if(!edges.find(e=>e.from===connectFrom&&e.to===n.id))
+          edges.push({from:connectFrom,to:n.id,highlight:false});
+        connectFrom=null;draw();setStatus('Edge added');
+      }
+    } else{connectFrom=null;draw();}
+  } else if(mode==='delete-mode'){
+    if(n){
+      nodes=nodes.filter(nd=>nd.id!==n.id);
+      edges=edges.filter(e=>e.from!==n.id&&e.to!==n.id);
+      hoverEdge=null;draw();setStatus('Node deleted');
+    } else {
+      const edge=edgeAt(x,y);
+      if(edge){edges=edges.filter(ed=>ed!==edge);hoverEdge=null;draw();setStatus('Connection deleted');}
+    }
+  }
+});
+mc.addEventListener('mouseup',()=>{dragging=null;});
+mc.addEventListener('dblclick',e=>{
+  const r=mc.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  const n=nodeAt(x,y);if(!n) return;
+  currentNode=n.id;
+  edNote.value=n.note;edOct.value=n.octave;edDur.value=n.dur;edLabel.value=n.label||'';
+  let ex=n.x+n.r+10,ey=n.y-20;
+  if(ex+215>mc.width) ex=n.x-215-n.r;
+  if(ey+230>mc.height) ey=mc.height-235;
+  if(ey<0) ey=0;
+  editor.style.left=ex+'px';editor.style.top=ey+'px';editor.style.display='block';
+});
+document.getElementById('ed-ok').onclick=()=>{
+  const n=nodes.find(nd=>nd.id===currentNode);if(!n) return;
+  n.note=edNote.value;n.octave=parseInt(edOct.value);
+  n.dur=parseFloat(edDur.value);n.r=durR(n.dur);n.label=edLabel.value;
+  editor.style.display='none';draw();
+};
+document.getElementById('ed-del').onclick=()=>{
+  nodes=nodes.filter(n=>n.id!==currentNode);
+  edges=edges.filter(e=>e.from!==currentNode&&e.to!==currentNode);
+  editor.style.display='none';draw();
+};
+mc.addEventListener('click',e=>{
+  const r=mc.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  if(!nodeAt(x,y)) editor.style.display='none';
+});
+
+// ── Mode ──────────────────────────────────────────────────────────────────────
+function setMode(m){
+  mode=m;connectFrom=null;hoverEdge=null;
+  document.getElementById('btn-add').className='tb-btn'+(m==='add'?' active':'');
+  document.getElementById('btn-connect').className='tb-btn'+(m==='connect'?' active':'');
+  document.getElementById('btn-delete-mode').className='tb-btn'+(m==='delete-mode'?' active':'');
+  const msgs={add:'Click canvas to add node',connect:'Click a node, then another (or same) to connect','delete-mode':'Click a node or arrow to delete it'};
+  hintEl.textContent=msgs[m]||'';
+  mc.style.cursor=m==='add'?'crosshair':'default';
+  draw();
+}
+document.getElementById('btn-add').onclick=()=>setMode('add');
+document.getElementById('btn-connect').onclick=()=>setMode('connect');
+document.getElementById('btn-delete-mode').onclick=()=>setMode('delete-mode');
+
+// ── Shared walk logic ─────────────────────────────────────────────────────────
+// Always produces exactly `steps` notes, never stops early.
+// Dead-end nodes teleport to a random node (same as live playback).
+function markovWalk(steps){
+  if(!nodes.length) return [];
+  const result=[];
+  let curId=nodes[0].id;
+  for(let i=0;i<steps;i++){
+    const n=nodes.find(nd=>nd.id===curId);
+    if(!n) break;
+    result.push(n);
+    const outs=outEdges(curId);
+    if(outs.length){
+      curId=outs[Math.floor(Math.random()*outs.length)].to;
+    } else {
+      // dead end — teleport to random node
+      curId=nodes[Math.floor(Math.random()*nodes.length)].id;
+    }
+  }
+  return result;
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+function startPlay(){
+  if(!nodes.length){setStatus('Add some nodes first!');return;}
+  if(playing) return;
+  getAudioCtx();
+  playing=true;stepCount=0;playHead=nodes[0].id;
+  setStatus('Playing…');tick();
+}
+function tick(){
+  if(!playing) return;
+  edges.forEach(e=>e.highlight=false);
+  const n=nodes.find(nd=>nd.id===playHead);if(!n){stopPlay();return;}
+  const durSec=(60/tempo)*n.dur;
+  playNote(noteToFreq(n.note,n.octave),durSec*0.88);
+  const outs=outEdges(playHead);
+  let nextId;
+  if(outs.length){
+    const picked=outs[Math.floor(Math.random()*outs.length)];
+    const e=edges.find(e=>e.from===playHead&&e.to===picked.to);if(e) e.highlight=true;
+    nextId=picked.to;
+  } else {
+    nextId=nodes[Math.floor(Math.random()*nodes.length)].id;
+  }
+  draw();stepCount++;
+  if(stepCount>=maxSteps){stopPlay();return;}
+  playHead=nextId;
+  playTimer=setTimeout(tick,durSec*1000);
+}
+function stopPlay(){
+  playing=false;clearTimeout(playTimer);playHead=null;
+  edges.forEach(e=>e.highlight=false);
+  setStatus('Stopped');draw();
+}
+document.getElementById('btn-play').onclick=startPlay;
+document.getElementById('btn-stop').onclick=stopPlay;
+
+// ── MIDI export ───────────────────────────────────────────────────────────────
+function midiNoteNum(note,oct){return NOTE_NAMES.indexOf(note)+12*(oct+1);}
+
+function writeMidi(){
+  if(!nodes.length){setStatus('Nothing to export!');return;}
+  const ticksPerBeat=480;
+
+  // Generate full walk — same 64 steps as live playback
+  const walk=markovWalk(maxSteps);
+  if(!walk.length){setStatus('No nodes to export.');return;}
+
+  function vl(v){
+    const b=[];b.unshift(v&0x7F);v>>=7;
+    while(v>0){b.unshift((v&0x7F)|0x80);v>>=7;}
+    return b;
+  }
+
+  let td=[];
+  // Tempo meta event
+  const us=Math.round(60000000/tempo);
+  td.push(0x00,0xFF,0x51,0x03,(us>>16)&0xFF,(us>>8)&0xFF,us&0xFF);
+
+  // Note events — sequential, no gap between notes
+  walk.forEach(n=>{
+    const pitch=midiNoteNum(n.note,n.octave);
+    const ticks=Math.round(n.dur*ticksPerBeat);
+    // note on (delta 0)
+    td.push(...vl(0), 0x90, pitch, 100);
+    // note off after ticks
+    td.push(...vl(ticks), 0x80, pitch, 0);
+  });
+
+  // End of track
+  td.push(0x00,0xFF,0x2F,0x00);
+
+  const len=td.length;
+  const bytes=new Uint8Array([
+    // MThd
+    0x4D,0x54,0x68,0x64, 0x00,0x00,0x00,0x06,
+    0x00,0x00,            // format 0
+    0x00,0x01,            // 1 track
+    (ticksPerBeat>>8)&0xFF, ticksPerBeat&0xFF,
+    // MTrk
+    0x4D,0x54,0x72,0x6B,
+    (len>>24)&0xFF,(len>>16)&0xFF,(len>>8)&0xFF,len&0xFF,
+    ...td
+  ]);
+
+  const url=URL.createObjectURL(new Blob([bytes],{type:'audio/midi'}));
+  const a=document.createElement('a');a.href=url;a.download='markov-music.mid';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  setStatus(`MIDI downloaded — ${walk.length} notes`);
+}
+document.getElementById('btn-dl').onclick=writeMidi;
+
+// ── Save pattern ──────────────────────────────────────────────────────────────
+function savePattern(){
+  const pattern=JSON.stringify({
+    nodes:nodes.map(n=>({id:n.id,x:Math.round(n.x),y:Math.round(n.y),r:n.r,note:n.note,octave:n.octave,dur:n.dur,label:n.label})),
+    edges:edges.map(e=>({from:e.from,to:e.to}))
+  });
+  const src=document.documentElement.outerHTML;
+  const inject=`<script>window.__SAVED_PATTERN__=${JSON.stringify(pattern)};<\/script>`;
+  let out=src.replace(/<script>window\.__SAVED_PATTERN__=.*?<\/script>/g,'');
+  out=out.replace('</head>',inject+'</head>');
+  const url=URL.createObjectURL(new Blob([out],{type:'text/html'}));
+  const a=document.createElement('a');a.href=url;a.download='markov-music-pattern.html';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  setStatus('Pattern saved as HTML file');
+}
+document.getElementById('btn-save').onclick=savePattern;
+
+function loadSaved(){
+  if(!window.__SAVED_PATTERN__) return false;
+  try{const p=JSON.parse(window.__SAVED_PATTERN__);nodes=p.nodes;edges=p.edges.map(e=>({...e,highlight:false}));return true;}
+  catch(e){return false;}
+}
+function setStatus(s){statusEl.textContent=s;}
+
+window.addEventListener('resize',resize);
+resize();
+
+if(!loadSaved()){
+  const seed=[
+    {id:'n1',x:110,y:210,note:'C',octave:4,dur:1,label:'start'},
+    {id:'n2',x:260,y:130,note:'E',octave:4,dur:0.5,label:''},
+    {id:'n3',x:260,y:295,note:'G',octave:4,dur:2,label:''},
+    {id:'n4',x:400,y:210,note:'A',octave:4,dur:0.5,label:''},
+    {id:'n5',x:530,y:130,note:'F',octave:4,dur:0.25,label:''},
+    {id:'n6',x:530,y:295,note:'D',octave:5,dur:4,label:'end'},
+  ];
+  seed.forEach(s=>nodes.push({...s,r:durR(s.dur)}));
+  edges=[
+    {from:'n1',to:'n2',highlight:false},{from:'n1',to:'n3',highlight:false},
+    {from:'n2',to:'n1',highlight:false},
+    {from:'n2',to:'n4',highlight:false},{from:'n3',to:'n4',highlight:false},
+    {from:'n4',to:'n5',highlight:false},{from:'n4',to:'n6',highlight:false},
+    {from:'n5',to:'n5',highlight:false},
+    {from:'n5',to:'n1',highlight:false},{from:'n6',to:'n1',highlight:false},
+  ];
+}
+draw();setStatus('Ready — press Play or build your own chain');
+})();
+</script>
+</body></html>
