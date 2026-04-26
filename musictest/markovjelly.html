@@ -1,0 +1,718 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+#app{position:relative;width:100%;height:100vh;overflow:hidden;border-radius:0;font-family:sans-serif}
+#toolbar{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;gap:5px;padding:9px 12px;background:rgba(3,18,40,0.78);backdrop-filter:blur(10px);flex-wrap:wrap}
+.logo{font-size:13px;font-weight:600;color:#9dd4ff;margin-right:3px;letter-spacing:0.02em}
+.tb-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid rgba(157,212,255,0.2);background:rgba(157,212,255,0.06);color:#9dd4ff;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.tb-btn:hover{background:rgba(157,212,255,0.15);border-color:rgba(157,212,255,0.4)}
+.tb-btn.active{background:rgba(157,212,255,0.22);border-color:rgba(157,212,255,0.55)}
+.tb-btn.play{border-color:rgba(110,220,150,0.4);background:rgba(110,220,150,0.1);color:#6edc96}
+.tb-btn.play:hover{background:rgba(110,220,150,0.2)}
+.tb-btn.stop{border-color:rgba(255,110,110,0.4);background:rgba(255,110,110,0.08);color:#ff8888}
+.tb-btn.dl{color:#9dd4ff}
+.tb-btn.save{border-color:rgba(255,195,80,0.3);background:rgba(255,195,80,0.07);color:#ffc350}
+.tb-btn.daw{border-color:rgba(195,150,255,0.3);background:rgba(195,150,255,0.07);color:#c396ff}
+.tb-btn.daw.conn{background:rgba(195,150,255,0.25);border-color:rgba(195,150,255,0.6);color:#dfc0ff}
+.sep{width:1px;height:16px;background:rgba(157,212,255,0.12);margin:0 1px}
+#hint{font-size:10px;color:rgba(157,212,255,0.38);margin-left:auto;white-space:nowrap}
+#main-canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+#status{position:absolute;bottom:9px;left:13px;font-size:10px;color:rgba(157,212,255,0.42);pointer-events:none}
+#deadend-note{position:absolute;bottom:9px;right:13px;font-size:10px;color:rgba(157,212,255,0.28);pointer-events:none;font-style:italic}
+#daw-panel{position:absolute;top:50px;right:8px;z-index:20;background:rgba(3,14,30,0.94);border:1px solid rgba(195,150,255,0.25);border-radius:12px;padding:12px 14px;width:245px;display:none;backdrop-filter:blur(12px)}
+#daw-panel h3{font-size:12px;font-weight:600;color:#c396ff;margin-bottom:8px}
+#daw-panel label{font-size:11px;color:rgba(157,212,255,0.55);display:block;margin-bottom:3px}
+#midi-port-select,#midi-channel{width:100%;font-size:12px;margin-bottom:8px;background:rgba(157,212,255,0.06);border:1px solid rgba(157,212,255,0.18);color:#9dd4ff;border-radius:8px;padding:4px 7px}
+#daw-ch-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#daw-ch-row label{margin:0;flex-shrink:0}
+#midi-channel{width:52px;margin:0}
+#daw-conn-btn{width:100%;font-size:12px;padding:6px;border-radius:8px;border:none;background:rgba(195,150,255,0.2);color:#c396ff;cursor:pointer;font-weight:500}
+#daw-conn-btn:hover{background:rgba(195,150,255,0.35)}
+#daw-st{font-size:10.5px;color:rgba(157,212,255,0.45);margin-top:8px;line-height:1.5}
+#daw-tip{font-size:10px;color:rgba(157,212,255,0.3);margin-top:7px;line-height:1.6;border-top:1px solid rgba(157,212,255,0.1);padding-top:7px}
+#daw-tip b{color:rgba(157,212,255,0.5)}
+#node-editor{position:absolute;background:rgba(3,14,30,0.95);border:1px solid rgba(157,212,255,0.22);border-radius:12px;padding:12px 14px;display:none;z-index:30;min-width:190px;backdrop-filter:blur(12px)}
+#node-editor label{font-size:11px;color:rgba(157,212,255,0.55);display:block;margin-bottom:3px}
+#node-editor select,#node-editor input{width:100%;margin-bottom:8px;font-size:12px;background:rgba(157,212,255,0.06);border:1px solid rgba(157,212,255,0.18);color:#9dd4ff;border-radius:8px;padding:3px 7px}
+.ed-row{display:flex;gap:8px}
+.ed-row button{flex:1;font-size:11px;padding:5px 0;border-radius:8px;border:1px solid rgba(157,212,255,0.18);background:rgba(157,212,255,0.06);color:#9dd4ff;cursor:pointer}
+.ed-row button.del{background:rgba(255,100,100,0.09);color:#ff8888;border-color:rgba(255,100,100,0.28)}
+</style>
+
+<div id="app">
+  <div id="toolbar">
+    <span class="logo">✦ Markov Jellyfish</span>
+    <button class="tb-btn active" id="btn-add">+ Jelly</button>
+    <button class="tb-btn" id="btn-connect">Link</button>
+    <button class="tb-btn" id="btn-delete-mode">Delete</button>
+    <div class="sep"></div>
+    <button class="tb-btn play" id="btn-play">▶ Play</button>
+    <button class="tb-btn stop" id="btn-stop">■ Stop</button>
+    <button class="tb-btn dl" id="btn-dl">↓ MIDI</button>
+    <div class="sep"></div>
+    <button class="tb-btn daw" id="btn-daw">⬡ DAW</button>
+    <button class="tb-btn save" id="btn-save">⊞ Save</button>
+    <span id="hint">Click ocean to summon a jellyfish</span>
+  </div>
+  <canvas id="main-canvas"></canvas>
+  <div id="daw-panel">
+    <h3>⬡ DAW / External MIDI</h3>
+    <label>MIDI Output Port</label>
+    <select id="midi-port-select"><option value="">— scan for ports —</option></select>
+    <div id="daw-ch-row"><label>Channel</label><input id="midi-channel" type="number" min="1" max="16" value="1"/></div>
+    <button id="daw-conn-btn">Connect</button>
+    <div id="daw-st">Click Connect to scan MIDI ports.</div>
+    <div id="daw-tip"><b>Mac:</b> Audio MIDI Setup → IAC Driver → enable.<br><b>Win:</b> Install loopMIDI, create a port.<br>Then set that port as MIDI input in your DAW.</div>
+  </div>
+  <div id="node-editor">
+    <label>Note</label><select id="ed-note"></select>
+    <label>Octave</label><select id="ed-oct"></select>
+    <label>Duration</label>
+    <select id="ed-dur">
+      <option value="0.25">16th — tiny</option>
+      <option value="0.5">8th — small</option>
+      <option value="1" selected>Quarter — medium</option>
+      <option value="2">Half — large</option>
+      <option value="4">Whole — huge</option>
+    </select>
+    <label>Label</label>
+    <input id="ed-label" type="text" placeholder="optional" maxlength="12"/>
+    <div class="ed-row"><button id="ed-ok">OK</button><button id="ed-del" class="del">Delete</button></div>
+  </div>
+  <div id="status">Ready</div>
+  <div id="deadend-note">dead-end nodes jump to a random jellyfish</div>
+</div>
+
+<script>
+(function(){
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const DUR_R={0.25:16,0.5:22,1:30,2:40,4:52};
+function durR(d){return DUR_R[d]||30;}
+
+// Jellyfish colour palettes [bell-bright, bell-mid, tentacle, glow]
+const PALETTES=[
+  [[120,190,255],[80,145,230],[100,165,245],[170,220,255]],   // sky blue
+  [[170,110,255],[130,75,220],[150,95,240],[210,165,255]],   // violet
+  [[80,215,175],[50,175,145],[65,195,165],[130,240,210]],    // teal
+  [[255,150,100],[220,110,65],[240,130,85],[255,195,155]],   // coral
+  [[255,110,175],[215,70,145],[235,90,165],[255,165,210]],   // pink
+  [[90,200,245],[55,160,215],[75,182,232],[145,225,255]],    // cyan
+  [[175,245,105],[135,205,70],[158,228,90],[210,255,150]],   // lime
+  [[255,205,65],[220,165,30],[240,188,50],[255,230,130]],    // amber
+];
+function notePalette(note){return PALETTES[NOTE_NAMES.indexOf(note)%PALETTES.length];}
+function rgb(c,a){return `rgba(${c[0]},${c[1]},${c[2]},${a})`;}
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let audioCtx=null;
+function getACtx(){
+  if(!audioCtx||audioCtx.state==='closed') audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function noteFreq(note,oct){return 440*Math.pow(2,(NOTE_NAMES.indexOf(note)+12*(oct+1)-69)/12);}
+function playInternal(freq,dur){
+  const ac=getACtx(),osc=ac.createOscillator(),g=ac.createGain();
+  osc.connect(g);g.connect(ac.destination);
+  osc.type='triangle';osc.frequency.value=freq;
+  g.gain.setValueAtTime(0.001,ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.3,ac.currentTime+0.025);
+  g.gain.exponentialRampToValueAtTime(0.14,ac.currentTime+Math.min(0.14,dur*0.38));
+  g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur*0.87);
+  osc.start();osc.stop(ac.currentTime+dur);
+}
+
+// ── MIDI / DAW ────────────────────────────────────────────────────────────────
+let midiAccess=null,midiOut=null,midiCh=0,dawOn=false,lastPitch=null;
+const dawPanel=document.getElementById('daw-panel');
+const midiSel=document.getElementById('midi-port-select');
+const dawStEl=document.getElementById('daw-st');
+const dawBtn=document.getElementById('daw-conn-btn');
+const btnDaw=document.getElementById('btn-daw');
+function setDawSt(m,ok){dawStEl.textContent=m;dawStEl.style.color=ok?'#6edc96':ok===false?'#ff8888':'rgba(157,212,255,0.45)';}
+async function scanPorts(){
+  if(!navigator.requestMIDIAccess){setDawSt('Web MIDI not supported. Use Chrome/Edge.',false);return;}
+  try{midiAccess=await navigator.requestMIDIAccess();fillPorts();midiAccess.onstatechange=fillPorts;setDawSt('Ports scanned. Pick one and connect.');}
+  catch(e){setDawSt('MIDI denied: '+e.message,false);}
+}
+function fillPorts(){
+  const prev=midiSel.value;midiSel.innerHTML='';
+  if(!midiAccess||!midiAccess.outputs.size){midiSel.innerHTML='<option value="">No outputs found</option>';return;}
+  midiAccess.outputs.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;if(p.id===prev)o.selected=true;midiSel.appendChild(o);});
+}
+function connectDaw(){
+  if(!midiAccess){scanPorts();return;}
+  const pid=midiSel.value;if(!pid){setDawSt('No port selected.',false);return;}
+  midiOut=midiAccess.outputs.get(pid);
+  midiCh=Math.max(0,Math.min(15,parseInt(document.getElementById('midi-channel').value||'1')-1));
+  if(midiOut){dawOn=true;btnDaw.className='tb-btn daw conn';btnDaw.textContent='⬡ DAW ✓';setDawSt('Connected: '+midiOut.name,true);}
+  else setDawSt('Could not open port.',false);
+}
+function disconnectDaw(){
+  if(lastPitch!==null){midiNoteOff(lastPitch);lastPitch=null;}
+  midiOut=null;dawOn=false;btnDaw.className='tb-btn daw';btnDaw.textContent='⬡ DAW';setDawSt('Disconnected.');
+}
+function midiNoteOn(p){if(midiOut)midiOut.send([0x90|midiCh,p,100]);}
+function midiNoteOff(p){if(midiOut)midiOut.send([0x80|midiCh,p,0]);}
+function midiNum(note,oct){return NOTE_NAMES.indexOf(note)+12*(oct+1);}
+dawBtn.addEventListener('click',()=>{if(dawOn)disconnectDaw();else connectDaw();dawBtn.textContent=dawOn?'Disconnect':'Connect';});
+btnDaw.addEventListener('click',()=>{const open=dawPanel.style.display==='block';dawPanel.style.display=open?'none':'block';if(!open&&!midiAccess)scanPorts();});
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let nodes=[],edges=[],mode='add',playing=false,playTimer=null;
+let connectFrom=null,curNode=null,hoverNode=null,hoverEdge=null;
+let mouseX=0,mouseY=0,dragging=null,dragOX=0,dragOY=0;
+let playHead=null,stepCount=0,maxSteps=64,tempo=120;
+let T=0,rafId=null;
+
+const app=document.getElementById('app');
+const mc=document.getElementById('main-canvas');
+const ctx=mc.getContext('2d');
+const editor=document.getElementById('node-editor');
+const edNote=document.getElementById('ed-note');
+const edOct=document.getElementById('ed-oct');
+const edDur=document.getElementById('ed-dur');
+const edLabel=document.getElementById('ed-label');
+const statusEl=document.getElementById('status');
+const hintEl=document.getElementById('hint');
+
+NOTE_NAMES.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;edNote.appendChild(o);});
+[2,3,4,5,6].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===4)o.selected=true;edOct.appendChild(o);});
+
+function resize(){const r=app.getBoundingClientRect();
+  mc.width = window.innerWidth;
+  mc.height = window.innerHeight;
+}
+
+// ── Ocean particles ───────────────────────────────────────────────────────────
+const PARTS=[];
+for(let i=0;i<55;i++) PARTS.push({x:Math.random(),y:Math.random(),s:0.4+Math.random()*1.4,sp:0.04+Math.random()*0.08,ph:Math.random()*Math.PI*2,vy:-(0.03+Math.random()*0.05)});
+
+function drawOcean(){
+  const W=mc.width,H=mc.height;
+  // deep ocean gradient
+  const g=ctx.createLinearGradient(0,0,W*0.3,H);
+  g.addColorStop(0,'#02111f');
+  g.addColorStop(0.35,'#041e38');
+  g.addColorStop(0.7,'#052744');
+  g.addColorStop(1,'#021528');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+  // light rays from top
+  ctx.save();ctx.globalAlpha=0.028;
+  for(let i=0;i<6;i++){
+    const rx=W*(0.1+i*0.17+Math.sin(T*0.12+i)*0.04);
+    const rw=W*(0.06+Math.sin(T*0.08+i*1.3)*0.02);
+    ctx.beginPath();
+    ctx.moveTo(rx-rw,0);ctx.lineTo(rx+rw,0);
+    ctx.lineTo(rx+rw*2.5,H);ctx.lineTo(rx-rw*2.5,H);
+    ctx.closePath();
+    ctx.fillStyle=`rgba(120,200,255,1)`;ctx.fill();
+  }
+  ctx.restore();
+
+  // caustic ripples
+  ctx.save();ctx.globalAlpha=0.035;
+  for(let i=0;i<8;i++){
+    const ry=((T*18+i*110)%H);
+    const amp=12+Math.sin(T*0.3+i)*8;
+    ctx.beginPath();ctx.moveTo(0,ry);
+    for(let x=0;x<=W;x+=30){
+      ctx.lineTo(x,ry+Math.sin(T*0.5+x*0.02+i)*amp);
+    }
+    ctx.strokeStyle='#78d4ff';ctx.lineWidth=1;ctx.stroke();
+  }
+  ctx.restore();
+
+  // floating particles
+  ctx.save();
+  PARTS.forEach(p=>{
+    p.y+=p.vy*0.016;p.x+=Math.sin(T*p.sp+p.ph)*0.0003;
+    if(p.y<-0.01)p.y=1.02;
+    const px=p.x*W,py=p.y*H;
+    const flicker=0.3+Math.sin(T*2+p.ph)*0.2;
+    ctx.globalAlpha=flicker*0.5;
+    ctx.beginPath();ctx.arc(px,py,p.s,0,Math.PI*2);
+    ctx.fillStyle='#b0e8ff';ctx.fill();
+  });
+  ctx.restore();
+}
+
+// ── Jellyfish ─────────────────────────────────────────────────────────────────
+function jellyY(n){return n.y+Math.sin(T*n.bspd+n.boff)*5;}
+
+function drawJelly(n){
+  const isPlay=playHead===n.id;
+  const isHov=hoverNode===n.id;
+  const isDel=mode==='delete-mode';
+  const pal=notePalette(n.note);
+  const r=n.r;
+  const cy=jellyY(n);
+  const cx=n.x;
+  const pulse=1+Math.sin(T*n.pspd+n.poff)*0.055;
+  const squeeze=1-Math.sin(T*n.pspd+n.poff)*0.03;
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(pulse*squeeze,pulse/squeeze);
+
+  // playing aura
+  if(isPlay){
+    const aura=ctx.createRadialGradient(0,0,r*0.6,0,0,r*2.6);
+    aura.addColorStop(0,rgb(pal[3],0.28));
+    aura.addColorStop(0.5,rgb(pal[3],0.08));
+    aura.addColorStop(1,rgb(pal[3],0));
+    ctx.beginPath();ctx.arc(0,0,r*2.6,0,Math.PI*2);
+    ctx.fillStyle=aura;ctx.fill();
+  }
+
+  // tentacles — multiple wavy strands
+  const tCount=6+Math.floor(r/9);
+  for(let i=0;i<tCount;i++){
+    const frac=i/(tCount-1);
+    const baseAngle=Math.PI*frac; // spread under the bell
+    const bx=Math.cos(baseAngle)*r*0.7;
+    const by=r*0.1;
+    const tLen=r*(0.7+Math.sin(i*2.1)*0.3+0.2);
+    const sway1=Math.sin(T*0.9+i*1.1+n.boff)*14;
+    const sway2=Math.sin(T*0.6+i*0.7+n.boff+1)*9;
+
+    const cp1x=bx+sway1*0.4;
+    const cp1y=by+tLen*0.35;
+    const cp2x=bx+sway2*0.7-sway1*0.2;
+    const cp2y=by+tLen*0.68;
+    const ex=bx+sway1+sway2*0.4;
+    const ey=by+tLen;
+
+    const tg=ctx.createLinearGradient(bx,by,ex,ey);
+    tg.addColorStop(0,rgb(pal[1],isPlay?0.8:0.5));
+    tg.addColorStop(0.5,rgb(pal[2],isPlay?0.55:0.32));
+    tg.addColorStop(1,rgb(pal[0],0));
+
+    ctx.beginPath();ctx.moveTo(bx,by);
+    ctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,ex,ey);
+    ctx.strokeStyle=tg;
+    ctx.lineWidth=isPlay?1.8:1.1;ctx.lineCap='round';ctx.stroke();
+  }
+
+  // bell — filled dome
+  ctx.beginPath();
+  ctx.arc(0,0,r,Math.PI,0,false);
+  // scalloped bottom
+  const scallops=5;
+  for(let s=0;s<scallops;s++){
+    const t1=0+(s/scallops)*Math.PI;
+    const t2=0+((s+1)/scallops)*Math.PI;
+    const mx=Math.cos((t1+t2)/2)*r;
+    const my=Math.sin((t1+t2)/2)*r*0.32;
+    ctx.quadraticCurveTo(mx,my,Math.cos(t2)*-r,Math.sin(t2)*r*0.1);
+  }
+  ctx.closePath();
+
+  const bg=ctx.createRadialGradient(-r*0.28,-r*0.32,r*0.04,0,r*0.1,r*1.05);
+  bg.addColorStop(0,rgb(pal[3],isPlay?0.82:0.58));
+  bg.addColorStop(0.45,rgb(pal[0],isPlay?0.65:0.44));
+  bg.addColorStop(0.8,rgb(pal[1],isPlay?0.44:0.28));
+  bg.addColorStop(1,rgb(pal[1],isPlay?0.18:0.09));
+  ctx.fillStyle=bg;ctx.fill();
+
+  // inner veil highlight
+  const vh=ctx.createRadialGradient(-r*0.22,-r*0.28,0,-r*0.18,-r*0.22,r*0.62);
+  vh.addColorStop(0,'rgba(255,255,255,0.28)');
+  vh.addColorStop(0.6,'rgba(255,255,255,0.06)');
+  vh.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.beginPath();ctx.arc(0,-r*0.05,r*0.8,Math.PI,0,false);ctx.fillStyle=vh;ctx.fill();
+
+  // inner oral arms (thin inner tentacle fringe)
+  for(let i=0;i<4;i++){
+    const ax=(i/(3))*r*1.1-r*0.55;
+    const armSway=Math.sin(T*1.1+i*1.5+n.boff)*6;
+    ctx.beginPath();ctx.moveTo(ax,r*0.05);
+    ctx.quadraticCurveTo(ax+armSway,r*0.28,ax+armSway*1.4,r*0.5);
+    ctx.strokeStyle=rgb(pal[3],isPlay?0.5:0.28);ctx.lineWidth=0.8;ctx.stroke();
+  }
+
+  // bell rim shimmer
+  ctx.beginPath();ctx.arc(0,0,r,Math.PI+0.08,0-0.08,false);
+  ctx.strokeStyle=rgb(pal[3],isPlay?0.6:0.3);ctx.lineWidth=1;ctx.stroke();
+
+  // note text
+  const fs=Math.max(10,Math.round(r*0.38));
+  ctx.fillStyle=`rgba(255,255,255,${isPlay?0.98:0.75})`;
+  ctx.font=`bold ${fs}px sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(n.note+n.octave,0,-r*0.24);
+
+  // label
+  if(n.label){
+    ctx.font='9.5px sans-serif';ctx.textBaseline='top';
+    ctx.fillStyle=rgb(pal[3],0.7);
+    ctx.fillText(n.label,0,r*0.5);
+  }
+
+  // hover ring
+  if(isHov&&!isPlay){
+    ctx.beginPath();ctx.arc(0,0,r+5,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.22)';ctx.lineWidth=1.5;ctx.stroke();
+  }
+  // delete mark
+  if(isDel){
+    ctx.fillStyle='rgba(255,100,100,0.9)';ctx.font='bold 13px sans-serif';
+    ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('×',r-1,-r+1);
+  }
+
+  ctx.restore();
+  // store actual drawn cy
+  n._cy=cy;
+}
+
+// ── Connections — living kelp-like curves ─────────────────────────────────────
+function drawEdges(){
+  edges.forEach(e=>{
+    const F=nodes.find(n=>n.id===e.from),To=nodes.find(n=>n.id===e.to);
+    if(!F||!To) return;
+    const palF=notePalette(F.note),palT=notePalette(To.note);
+    const isHL=e.highlight,isHov=(hoverEdge===e);
+    const alpha=isHL?0.9:isHov?0.65:0.38;
+    const lw=isHL?2.2:isHov?1.6:1.0;
+
+    const fcx=F.x,fcy=jellyY(F);
+    const tcx=To.x,tcy=jellyY(To);
+
+    // self-loop
+    if(F.id===To.id){
+      const lr=F.r*0.68;
+      const lx=fcx-F.r*0.28,ly=fcy-F.r*0.85;
+      ctx.beginPath();ctx.arc(lx,ly,lr,0.5,Math.PI*1.78,false);
+      ctx.strokeStyle=rgb(palF[0],alpha);ctx.lineWidth=lw;
+      ctx.setLineDash([4,5]);ctx.stroke();ctx.setLineDash([]);
+      const ax=lx+lr*Math.cos(Math.PI*1.78),ay=ly+lr*Math.sin(Math.PI*1.78);
+      drawHead(ax,ay,Math.PI*1.78+1.1,rgb(palF[0],alpha));
+      if(isHov&&mode==='delete-mode'){
+        ctx.fillStyle='rgba(255,100,100,0.9)';ctx.font='bold 12px sans-serif';
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×',lx,ly-lr-4);
+      }
+      const outs=edges.filter(ed=>ed.from===F.id);
+      if(outs.length>1){
+        ctx.fillStyle='rgba(157,212,255,0.42)';ctx.font='9px sans-serif';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(Math.round(100/outs.length)+'%',lx-lr-9,ly);
+      }
+      return;
+    }
+
+    const dx=tcx-fcx,dy=tcy-fcy,dist=Math.hypot(dx,dy);if(dist<1)return;
+    const ux=dx/dist,uy=dy/dist,nx=-uy,ny=ux;
+    const both=edges.some(ed=>ed.from===To.id&&ed.to===F.id);
+    const off=both?11:0;
+
+    const sx=fcx+ux*F.r+nx*off,sy=fcy+uy*F.r+ny*off;
+    const ex2=tcx-ux*(To.r+9)+nx*off,ey2=tcy-uy*(To.r+9)+ny*off;
+
+    // animated waviness — two control points that undulate
+    const phase=T*0.55+F.id.charCodeAt(1)*0.4;
+    const wave=Math.sin(phase)*16;
+    const wave2=Math.cos(phase*0.7+1)*10;
+    const cpx=(sx+ex2)*0.5+nx*(off+wave),cpy=(sy+ey2)*0.5+ny*(off+wave);
+    const cp2x=(sx+ex2)*0.35+nx*wave2,cp2y=(sy+ey2)*0.35+ny*wave2;
+
+    // gradient stroke
+    const lg=ctx.createLinearGradient(sx,sy,ex2,ey2);
+    lg.addColorStop(0,rgb(palF[0],alpha));
+    lg.addColorStop(1,rgb(palT[0],alpha));
+    ctx.beginPath();ctx.moveTo(sx,sy);
+    ctx.bezierCurveTo(cpx,cpy,cp2x,cp2y,ex2,ey2);
+    ctx.strokeStyle=lg;ctx.lineWidth=lw;ctx.stroke();
+
+    // arrow
+    const angle=Math.atan2(ey2-cp2y,ex2-cp2x);
+    drawHead(ex2,ey2,angle,rgb(palT[0],alpha));
+
+    // delete hover X
+    if(isHov&&mode==='delete-mode'){
+      const mx=(sx+ex2)*0.5+nx*wave*0.35,my=(sy+ey2)*0.5+ny*wave*0.35;
+      ctx.fillStyle='rgba(255,100,100,0.9)';ctx.font='bold 12px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×',mx,my);
+    }
+    // prob label
+    const outs=edges.filter(ed=>ed.from===F.id);
+    if(outs.length>1){
+      const mx=(sx+ex2)*0.5+nx*(wave*0.35+15),my=(sy+ey2)*0.5+ny*(wave*0.35+15);
+      ctx.fillStyle='rgba(157,212,255,0.42)';ctx.font='9px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(Math.round(100/outs.length)+'%',mx,my);
+    }
+  });
+}
+
+function drawHead(x,y,angle,col){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-8,-3.2);ctx.lineTo(-8,3.2);ctx.closePath();
+  ctx.fillStyle=col;ctx.fill();ctx.restore();
+}
+
+function drawConnectLine(){
+  if(mode!=='connect'||!connectFrom)return;
+  const F=nodes.find(n=>n.id===connectFrom);if(!F)return;
+  const fcy=jellyY(F);
+  ctx.beginPath();ctx.moveTo(F.x,fcy);ctx.lineTo(mouseX,mouseY);
+  ctx.strokeStyle='rgba(157,212,255,0.25)';ctx.lineWidth=1.2;
+  ctx.setLineDash([6,5]);ctx.stroke();ctx.setLineDash([]);
+}
+
+// ── Render loop ───────────────────────────────────────────────────────────────
+function render(){
+  T+=0.016;
+  ctx.clearRect(0,0,mc.width,mc.height);
+  drawOcean();
+  drawEdges();
+  drawConnectLine();
+  nodes.forEach(drawJelly);
+  rafId=requestAnimationFrame(render);
+}
+
+// ── Hit testing ───────────────────────────────────────────────────────────────
+function nodeAt(x,y){
+  for(let i=nodes.length-1;i>=0;i--){
+    const n=nodes[i];
+    const cy=n._cy!==undefined?n._cy:n.y;
+    if(Math.hypot(x-n.x,y-cy)<=n.r) return n;
+  }return null;
+}
+function outEdges(id){return edges.filter(e=>e.from===id);}
+
+function ptSeg(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)return Math.hypot(px-ax,py-ay);
+  const t2=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));
+  return Math.hypot(px-(ax+t2*dx),py-(ay+t2*dy));
+}
+function edgeAt(x,y){
+  if(nodeAt(x,y))return null;
+  for(let i=edges.length-1;i>=0;i--){
+    const e=edges[i];
+    const F=nodes.find(n=>n.id===e.from),To=nodes.find(n=>n.id===e.to);
+    if(!F||!To)continue;
+    if(F.id===To.id){
+      const lx=F.x-F.r*0.28,ly=jellyY(F)-F.r*0.85,lr=F.r*0.68;
+      if(Math.abs(Math.hypot(x-lx,y-ly)-lr)<11)return e;
+    }else{
+      const fcx=F.x,fcy=jellyY(F),tcx=To.x,tcy=jellyY(To);
+      const dx=tcx-fcx,dy=tcy-fcy,dist=Math.hypot(dx,dy);if(!dist)continue;
+      const ux=dx/dist,uy=dy/dist,nx=-uy,ny=ux;
+      const both=edges.some(ed=>ed.from===To.id&&ed.to===F.id);
+      const off=both?11:0;
+      const sx=fcx+ux*F.r+nx*off,sy=fcy+uy*F.r+ny*off;
+      const ex2=tcx-ux*(To.r+9)+nx*off,ey2=tcy-uy*(To.r+9)+ny*off;
+      if(ptSeg(x,y,sx,sy,ex2,ey2)<13)return e;
+    }
+  }return null;
+}
+
+// ── Mouse ─────────────────────────────────────────────────────────────────────
+mc.addEventListener('mousemove',e=>{
+  const r=mc.getBoundingClientRect();mouseX=e.clientX;mouseY=e.clientY;
+  if(dragging){dragging.x=mouseX+dragOX;dragging.y=mouseY+dragOY;return;}
+  const n=nodeAt(mouseX,mouseY);
+  hoverNode=n?n.id:null;
+  hoverEdge=(!n&&mode==='delete-mode')?edgeAt(mouseX,mouseY):null;
+  mc.style.cursor=n?'pointer':(hoverEdge?'pointer':'crosshair');
+});
+mc.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  const r=mc.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  const n=nodeAt(x,y);
+  if(mode==='add'){
+    if(n){dragging=n;dragOX=n.x-x;dragOY=n.y-y;return;}
+    nodes.push({id:'n'+Date.now(),x,y,r:durR(1),note:'C',octave:4,dur:1,label:'',
+      bspd:0.55+Math.random()*0.5,boff:Math.random()*Math.PI*2,
+      pspd:1.4+Math.random()*0.8,poff:Math.random()*Math.PI*2,_cy:y});
+    setStatus('Jellyfish summoned — double-click to tune');
+  }else if(mode==='connect'){
+    if(n){
+      if(!connectFrom){connectFrom=n.id;setStatus('Click another jelly to link (same = self-loop)');}
+      else{
+        if(!edges.find(ed=>ed.from===connectFrom&&ed.to===n.id))
+          edges.push({from:connectFrom,to:n.id,highlight:false});
+        connectFrom=null;setStatus('Link formed');
+      }
+    }else connectFrom=null;
+  }else if(mode==='delete-mode'){
+    if(n){nodes=nodes.filter(nd=>nd.id!==n.id);edges=edges.filter(ed=>ed.from!==n.id&&ed.to!==n.id);hoverEdge=null;setStatus('Jellyfish dissolved');}
+    else{const ed=edgeAt(x,y);if(ed){edges=edges.filter(e=>e!==ed);hoverEdge=null;setStatus('Link severed');}}
+  }
+});
+mc.addEventListener('mouseup',()=>{dragging=null;});
+mc.addEventListener('dblclick',e=>{
+  const r=mc.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  const n=nodeAt(x,y);if(!n)return;
+  curNode=n.id;
+  edNote.value=n.note;edOct.value=n.octave;edDur.value=n.dur;edLabel.value=n.label||'';
+  let ex=n.x+n.r+10,ey=n.y-20;
+  if(ex+200>mc.width)ex=n.x-200-n.r;
+  if(ey+220>mc.height)ey=mc.height-225;
+  if(ey<52)ey=52;
+  editor.style.left=ex+'px';editor.style.top=ey+'px';editor.style.display='block';
+});
+document.getElementById('ed-ok').onclick=()=>{
+  const n=nodes.find(nd=>nd.id===curNode);if(!n)return;
+  n.note=edNote.value;n.octave=parseInt(edOct.value);
+  n.dur=parseFloat(edDur.value);n.r=durR(n.dur);n.label=edLabel.value;
+  editor.style.display='none';
+};
+document.getElementById('ed-del').onclick=()=>{
+  nodes=nodes.filter(n=>n.id!==curNode);edges=edges.filter(e=>e.from!==curNode&&e.to!==curNode);
+  editor.style.display='none';
+};
+mc.addEventListener('click',e=>{
+  const r=mc.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  if(!nodeAt(x,y))editor.style.display='none';
+});
+
+// ── Mode ──────────────────────────────────────────────────────────────────────
+function setMode(m){
+  mode=m;connectFrom=null;hoverEdge=null;
+  ['btn-add','btn-connect','btn-delete-mode'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.className='tb-btn'+(m==={add:'btn-add',connect:'btn-connect','delete-mode':'btn-delete-mode'}[m]?' active':'');
+  });
+  document.getElementById('btn-add').className='tb-btn'+(m==='add'?' active':'');
+  document.getElementById('btn-connect').className='tb-btn'+(m==='connect'?' active':'');
+  document.getElementById('btn-delete-mode').className='tb-btn'+(m==='delete-mode'?' active':'');
+  hintEl.textContent={add:'Click ocean to summon a jellyfish',connect:'Click a jelly then another (or same) to link','delete-mode':'Click a jelly or link to dissolve it'}[m]||'';
+  mc.style.cursor=m==='add'?'crosshair':'default';
+}
+document.getElementById('btn-add').onclick=()=>setMode('add');
+document.getElementById('btn-connect').onclick=()=>setMode('connect');
+document.getElementById('btn-delete-mode').onclick=()=>setMode('delete-mode');
+
+// ── Markov walk ───────────────────────────────────────────────────────────────
+function markovWalk(steps){
+  if(!nodes.length)return[];
+  const res=[];let cid=nodes[0].id;
+  for(let i=0;i<steps;i++){
+    const n=nodes.find(nd=>nd.id===cid);if(!n)break;
+    res.push(n);
+    const outs=outEdges(cid);
+    cid=outs.length?outs[Math.floor(Math.random()*outs.length)].to:nodes[Math.floor(Math.random()*nodes.length)].id;
+  }return res;
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+function startPlay(){
+  if(!nodes.length){setStatus('Summon some jellyfish first!');return;}
+  if(playing)return;
+  if(!dawOn)getACtx();
+  playing=true;stepCount=0;playHead=nodes[0].id;
+  setStatus(dawOn?'Singing to DAW…':'Singing…');tick();
+}
+function tick(){
+  if(!playing)return;
+  edges.forEach(e=>e.highlight=false);
+  const n=nodes.find(nd=>nd.id===playHead);if(!n){stopPlay();return;}
+  const ds=(60/tempo)*n.dur;
+  const pitch=midiNum(n.note,n.octave);
+  if(dawOn&&midiOut){
+    if(lastPitch!==null)midiNoteOff(lastPitch);
+    midiNoteOn(pitch);lastPitch=pitch;
+    setTimeout(()=>{if(dawOn&&lastPitch===pitch)midiNoteOff(pitch);},ds*880);
+  }else{
+    playInternal(noteFreq(n.note,n.octave),ds*0.87);
+  }
+  const outs=outEdges(playHead);
+  let nextId;
+  if(outs.length){
+    const picked=outs[Math.floor(Math.random()*outs.length)];
+    const ed=edges.find(e=>e.from===playHead&&e.to===picked.to);if(ed)ed.highlight=true;
+    nextId=picked.to;
+  }else{
+    nextId=nodes[Math.floor(Math.random()*nodes.length)].id;
+  }
+  stepCount++;
+  if(stepCount>=maxSteps){stopPlay();return;}
+  playHead=nextId;
+  playTimer=setTimeout(tick,ds*1000);
+}
+function stopPlay(){
+  playing=false;clearTimeout(playTimer);playHead=null;
+  edges.forEach(e=>e.highlight=false);
+  if(lastPitch!==null){midiNoteOff(lastPitch);lastPitch=null;}
+  setStatus('Quiet');
+}
+document.getElementById('btn-play').onclick=startPlay;
+document.getElementById('btn-stop').onclick=stopPlay;
+
+// ── MIDI file export ──────────────────────────────────────────────────────────
+function writeMidi(){
+  if(!nodes.length){setStatus('Nothing to export!');return;}
+  const tpb=480,walk=markovWalk(maxSteps);
+  function vl(v){const b=[];b.unshift(v&0x7F);v>>=7;while(v>0){b.unshift((v&0x7F)|0x80);v>>=7;}return b;}
+  let td=[];
+  const us=Math.round(60000000/tempo);
+  td.push(0x00,0xFF,0x51,0x03,(us>>16)&0xFF,(us>>8)&0xFF,us&0xFF);
+  walk.forEach(n=>{
+    const p=midiNum(n.note,n.octave),tk=Math.round(n.dur*tpb);
+    td.push(...vl(0),0x90,p,100,...vl(tk),0x80,p,0);
+  });
+  td.push(0x00,0xFF,0x2F,0x00);
+  const len=td.length;
+  const bytes=new Uint8Array([0x4D,0x54,0x68,0x64,0,0,0,6,0,0,0,1,(tpb>>8)&0xFF,tpb&0xFF,
+    0x4D,0x54,0x72,0x6B,(len>>24)&0xFF,(len>>16)&0xFF,(len>>8)&0xFF,len&0xFF,...td]);
+  const url=URL.createObjectURL(new Blob([bytes],{type:'audio/midi'}));
+  const a=document.createElement('a');a.href=url;a.download='markov-jellyfish.mid';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  setStatus(`MIDI downloaded — ${walk.length} notes`);
+}
+document.getElementById('btn-dl').onclick=writeMidi;
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+function savePattern(){
+  const pat=JSON.stringify({
+    nodes:nodes.map(n=>({id:n.id,x:Math.round(n.x),y:Math.round(n.y),r:n.r,note:n.note,octave:n.octave,dur:n.dur,label:n.label,bspd:n.bspd,boff:n.boff,pspd:n.pspd,poff:n.poff})),
+    edges:edges.map(e=>({from:e.from,to:e.to}))
+  });
+  const src=document.documentElement.outerHTML;
+  const inj=`<script>window.__SAVED_PATTERN__=${JSON.stringify(pat)};<\/script>`;
+  let out=src.replace(/<script>window\.__SAVED_PATTERN__=.*?<\/script>/g,'');
+  out=out.replace('</head>',inj+'</head>');
+  const url=URL.createObjectURL(new Blob([out],{type:'text/html'}));
+  const a=document.createElement('a');a.href=url;a.download='markov-jellyfish.html';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  setStatus('Pattern saved');
+}
+document.getElementById('btn-save').onclick=savePattern;
+
+function loadSaved(){
+  if(!window.__SAVED_PATTERN__)return false;
+  try{const p=JSON.parse(window.__SAVED_PATTERN__);nodes=p.nodes.map(n=>({...n,_cy:n.y}));edges=p.edges.map(e=>({...e,highlight:false}));return true;}
+  catch(e){return false;}
+}
+function setStatus(s){statusEl.textContent=s;}
+
+window.addEventListener('resize',resize);
+resize();
+
+if(!loadSaved()){
+  function addJ(id,x,y,note,oct,dur,lbl){
+    nodes.push({id,x,y,r:durR(dur),note,octave:oct,dur,label:lbl,
+      bspd:0.5+Math.random()*0.55,boff:Math.random()*Math.PI*2,
+      pspd:1.2+Math.random()*0.9,poff:Math.random()*Math.PI*2,_cy:y});
+  }
+  addJ('n1',120,235,'C',4,1,'start');
+  addJ('n2',275,150,'E',4,0.5,'');
+  addJ('n3',275,330,'G',4,2,'');
+  addJ('n4',430,235,'A',4,0.5,'');
+  addJ('n5',565,150,'F',4,0.25,'');
+  addJ('n6',565,335,'D',5,4,'end');
+  edges=[
+    {from:'n1',to:'n2',highlight:false},{from:'n1',to:'n3',highlight:false},
+    {from:'n2',to:'n1',highlight:false},
+    {from:'n2',to:'n4',highlight:false},{from:'n3',to:'n4',highlight:false},
+    {from:'n4',to:'n5',highlight:false},{from:'n4',to:'n6',highlight:false},
+    {from:'n5',to:'n5',highlight:false},
+    {from:'n5',to:'n1',highlight:false},{from:'n6',to:'n1',highlight:false},
+  ];
+}
+render();
+setStatus('Ready — click the ocean to summon jellyfish, double-click to tune');
+})();
+</script>
