@@ -46,11 +46,17 @@
     <button class="tb-btn" id="btn-delete-mode">Delete</button>
     <div class="sep"></div>
     <button class="tb-btn play" id="btn-play">▶ Play</button>
+    <button class="tb-btn play" id="btn-play-inf">∞ Play Infinitely</button>
     <button class="tb-btn stop" id="btn-stop">■ Stop</button>
     <button class="tb-btn dl" id="btn-dl">↓ MIDI</button>
     <div class="sep"></div>
     <button class="tb-btn daw conn" id="btn-daw">⬡ DAW ✓</button>
     <button class="tb-btn save" id="btn-save">⊞ Save</button>
+    <div class="sep"></div>
+    <label style="font-size:10px;color:rgba(157,212,255,0.5);white-space:nowrap">Speed</label>
+    <input type="range" id="speed-slider" min="25" max="400" value="100" step="1"
+      style="width:80px;accent-color:#9dd4ff;cursor:pointer;vertical-align:middle">
+    <span id="speed-label" style="font-size:10px;color:#9dd4ff;min-width:28px;white-space:nowrap">1×</span>
     <span id="hint">Click ocean to summon a jellyfish</span>
   </div>
   <canvas id="main-canvas" width="1470" height="736" style="cursor: crosshair;"></canvas>
@@ -158,7 +164,7 @@ dawBtn.addEventListener('click',()=>{if(dawOn)disconnectDaw();else connectDaw();
 btnDaw.addEventListener('click',()=>{const open=dawPanel.style.display==='block';dawPanel.style.display=open?'none':'block';if(!open&&!midiAccess)scanPorts();});
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let nodes=[],edges=[],mode='add',playing=false,playTimer=null;
+let nodes=[],edges=[],mode='add',playing=false;
 let connectFrom=null,curNode=null,hoverNode=null,hoverEdge=null;
 let mouseX=0,mouseY=0,dragging=null,dragOX=0,dragOY=0;
 let playHead=null,stepCount=0,maxSteps=64,tempo=120;
@@ -462,6 +468,7 @@ function drawConnectLine(){
 // ── Render loop ───────────────────────────────────────────────────────────────
 function render(){
   T+=0.016;
+  updateHighlightFromQueue();
   ctx.clearRect(0,0,mc.width,mc.height);
   drawOcean();
   drawEdges();
@@ -596,48 +603,139 @@ function markovWalk(steps){
   }return res;
 }
 
+// ── Speed control ─────────────────────────────────────────────────────────────
+let speedMult=1.0; // >1 = faster, <1 = slower
+const speedSlider=document.getElementById('speed-slider');
+const speedLabel=document.getElementById('speed-label');
+speedSlider.addEventListener('input',()=>{
+  speedMult=parseFloat(speedSlider.value)/100;
+  speedLabel.textContent=speedMult.toFixed(2).replace(/\.?0+$/,'')+'×';
+});
+
 // ── Playback ──────────────────────────────────────────────────────────────────
+// Uses AudioContext clock as the master clock so visual highlights and audio
+// are driven by the same timeline — no setTimeout drift accumulation.
+let scheduleAheadSec=0.05; // look-ahead buffer (seconds)
+let nextNoteTime=0;         // next note start on audioCtx clock
+let nextPlayId=null;        // node id queued for next beat
+let schedTimer=null;        // setInterval scheduler handle
+// Queue of {id, atTime} for the render loop to pick up highlights
+let highlightQueue=[];
+
 function startPlay(){
   if(!nodes.length){setStatus('Summon some jellyfish first!');return;}
   if(playing)return;
-  if(!dawOn)getACtx();
-  playing=true;stepCount=0;playHead=nodes[0].id;
-  setStatus(dawOn?'Singing to DAW…':'Singing…');tick();
-}
-function tick(){
-  if(!playing)return;
+  const ac=getACtx();
+  playing=true;stepCount=0;
+  playHead=nodes[0].id;
+  nextPlayId=nodes[0].id;
+  nextNoteTime=ac.currentTime+0.05;
+  highlightQueue=[];
   edges.forEach(e=>e.highlight=false);
-  const n=nodes.find(nd=>nd.id===playHead);if(!n){stopPlay();return;}
-  const ds=(60/tempo)*n.dur;
-  const pitch=midiNum(n.note,n.octave);
-  if(dawOn&&midiOut){
-    if(lastPitch!==null)midiNoteOff(lastPitch);
-    midiNoteOn(pitch);lastPitch=pitch;
-    setTimeout(()=>{if(dawOn&&lastPitch===pitch)midiNoteOff(pitch);},ds*880);
-  }else{
-    playInternal(noteFreq(n.note,n.octave),ds*0.87);
-  }
-  const outs=outEdges(playHead);
-  let nextId;
-  if(outs.length){
-    const picked=outs[Math.floor(Math.random()*outs.length)];
-    const ed=edges.find(e=>e.from===playHead&&e.to===picked.to);if(ed)ed.highlight=true;
-    nextId=picked.to;
-  }else{
-    nextId=nodes[Math.floor(Math.random()*nodes.length)].id;
-  }
-  stepCount++;
-  if(stepCount>=maxSteps){stopPlay();return;}
-  playHead=nextId;
-  playTimer=setTimeout(tick,ds*1000);
+  setStatus(dawOn?'Singing to DAW…':'Singing…');
+  // Scheduler runs frequently to keep the audio engine fed
+  schedTimer=setInterval(scheduler,25);
 }
+
+function scheduler(){
+  if(!playing)return;
+  const ac=getACtx();
+  // Schedule notes up to scheduleAheadSec seconds ahead of now
+  while(nextNoteTime<ac.currentTime+scheduleAheadSec+0.12){
+    scheduleNote(nextPlayId,nextNoteTime);
+    // Advance to next node
+    const outs=outEdges(nextPlayId);
+    let nextId;
+    if(outs.length){
+      const picked=outs[Math.floor(Math.random()*outs.length)];
+      nextId=picked.to;
+    }else{
+      nextId=nodes[Math.floor(Math.random()*nodes.length)].id;
+    }
+    stepCount++;
+    if(stepCount>=maxSteps){
+      // Let audio finish then stop
+      const endTime=nextNoteTime;
+      const stopDelay=(endTime-ac.currentTime)*1000+100;
+      setTimeout(stopPlay,Math.max(100,stopDelay));
+      clearInterval(schedTimer);schedTimer=null;
+      return;
+    }
+    const n=nodes.find(nd=>nd.id===nextPlayId);
+    const ds=n?((60/tempo)*n.dur)/speedMult:0.5;
+    nextNoteTime+=ds;
+    nextPlayId=nextId;
+  }
+}
+
+function scheduleNote(id,atTime){
+  const n=nodes.find(nd=>nd.id===id);if(!n)return;
+  const ds=((60/tempo)*n.dur)/speedMult;
+  const pitch=midiNum(n.note,n.octave);
+
+  // Schedule audio precisely
+  if(dawOn&&midiOut){
+    const ac=getACtx();
+    const delayMs=(atTime-ac.currentTime)*1000;
+    setTimeout(()=>{
+      if(!playing)return;
+      if(lastPitch!==null)midiNoteOff(lastPitch);
+      midiNoteOn(pitch);lastPitch=pitch;
+    },Math.max(0,delayMs));
+    setTimeout(()=>{if(dawOn&&lastPitch===pitch)midiNoteOff(pitch);},Math.max(0,delayMs+ds*880));
+  }else{
+    const ac=getACtx();
+    const osc=ac.createOscillator(),g=ac.createGain();
+    osc.connect(g);g.connect(ac.destination);
+    osc.type='triangle';osc.frequency.value=noteFreq(n.note,n.octave);
+    g.gain.setValueAtTime(0.001,atTime);
+    g.gain.exponentialRampToValueAtTime(0.3,atTime+0.025);
+    g.gain.exponentialRampToValueAtTime(0.14,atTime+Math.min(0.14,ds*0.38));
+    g.gain.exponentialRampToValueAtTime(0.001,atTime+ds*0.87);
+    osc.start(atTime);osc.stop(atTime+ds);
+  }
+
+  // Enqueue visual highlight — render loop will apply it at the right time
+  // Also mark which outgoing edge to highlight
+  const outs=outEdges(id);
+  let edgeHL=null;
+  if(outs.length){
+    // peek at next: find the edge we already chose (nextPlayId at this point)
+    // We derive it from what was queued: we record it below
+  }
+  highlightQueue.push({id,atTime,dur:ds});
+}
+
 function stopPlay(){
-  playing=false;clearTimeout(playTimer);playHead=null;
+  playing=false;
+  if(schedTimer){clearInterval(schedTimer);schedTimer=null;}
+  playHead=null;highlightQueue=[];
   edges.forEach(e=>e.highlight=false);
   if(lastPitch!==null){midiNoteOff(lastPitch);lastPitch=null;}
   setStatus('Quiet');
 }
-document.getElementById('btn-play').onclick=startPlay;
+
+// Called every render frame — applies highlight when audioCtx clock reaches note time
+function updateHighlightFromQueue(){
+  if(!playing||!highlightQueue.length)return;
+  const ac=getACtx();
+  const now=ac.currentTime;
+  // Process all notes whose start time has arrived
+  while(highlightQueue.length&&highlightQueue[0].atTime<=now+0.005){
+    const item=highlightQueue.shift();
+    // Clear previous highlights
+    edges.forEach(e=>e.highlight=false);
+    playHead=item.id;
+    // Highlight the edge leading to the next queued note
+    if(highlightQueue.length){
+      const nextId=highlightQueue[0].id;
+      const ed=edges.find(e=>e.from===item.id&&e.to===nextId);
+      if(ed)ed.highlight=true;
+    }
+  }
+}
+document.getElementById('btn-play').onclick=()=>{maxSteps=64;startPlay();};
+document.getElementById('btn-play-inf').onclick=()=>{maxSteps=Infinity;startPlay();};
 document.getElementById('btn-stop').onclick=stopPlay;
 
 // ── MIDI file export ──────────────────────────────────────────────────────────
