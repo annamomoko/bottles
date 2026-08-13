@@ -114,6 +114,7 @@ input[type=range]:focus-visible{outline:2px solid var(--stamp);outline-offset:4p
       <span><i class="led" id="ledPlay"></i>TONE</span>
       <span><i class="led" id="ledMouth"></i>MOUTH</span>
       <span><i class="led" id="ledVoice"></i>VOICE</span>
+      <span><i class="led" id="ledAudio"></i>AUDIO</span>
     </span>
   </div>
 
@@ -276,7 +277,14 @@ let seqT = null, started = false;
 
 function boot(){
   if (started) return; started = true;
+  /* iOS: declare this as playback so the ring/silent switch stops muting it */
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
   ac = new (window.AudioContext || window.webkitAudioContext)();
+  /* iOS: a one-sample silent blip inside the first gesture unlocks the output */
+  try {
+    const b = ac.createBuffer(1, 1, 22050), q = ac.createBufferSource();
+    q.buffer = b; q.connect(ac.destination); q.start(0);
+  } catch (e) {}
   out = ac.createGain(); out.gain.value = +document.getElementById("vol").value / 100;
   const comp = ac.createDynamicsCompressor();
   comp.threshold.value = -14; comp.ratio.value = 4; comp.release.value = .25;
@@ -326,7 +334,9 @@ function boot(){
   [oscA, oscB, sub, ns, vib].forEach(o => o.start());
   setVowel("uh", .001); setPitch(midi(), 0);
 }
-function resume(){ boot(); if (ac.state === "suspended") ac.resume(); }
+function resume(){ boot(); if (ac.state !== "running") ac.resume().catch(() => {}); }
+["pointerdown","touchend","click"].forEach(ev => document.addEventListener(ev, resume, {passive:true}));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && started) resume(); });
 const midi = () => base + semi;
 const hz = m => 440 * Math.pow(2, (m - 69) / 12);
 function setPitch(m, glide = .02){
@@ -412,7 +422,8 @@ const $ = id => document.getElementById(id);
 const ribbonHit = $("ribbonHit"), headHit = $("headHit"), bead = $("bead");
 const beadNodes = bead.querySelectorAll("circle");
 const mouthEl = $("mouth"), tongue = $("tongue"), headGrp = $("headGrp"), rings = $("rings"), eyes = $("eyes");
-const ledPlay = $("ledPlay"), ledMouth = $("ledMouth"), ledVoice = $("ledVoice"), rangeOut = $("rangeOut");
+const ledPlay = $("ledPlay"), ledMouth = $("ledMouth"), ledVoice = $("ledVoice"),
+      ledAudio = $("ledAudio"), rangeOut = $("rangeOut");
 const flow = $("flow"), lyrics = $("lyrics"), caret = $("caret");
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -568,6 +579,7 @@ function frame(){
   }
   ledMouth.classList.toggle("on", squeeze > .25);
   ledVoice.classList.toggle("on", sing && touching);
+  ledAudio.classList.toggle("on", started && ac.state === "running");
 }
 
 drawFrets(); moveBead(0); frame();
