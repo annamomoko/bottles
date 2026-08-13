@@ -169,15 +169,15 @@ input[type=range]:focus-visible{outline:2px solid var(--stamp);outline-offset:4p
         <ellipse cx="200" cy="606" rx="26" ry="20" fill="#f0b3a4" opacity=".55"/>
 
         <g id="eyes">
-          <ellipse cx="96" cy="540" rx="14" ry="18" fill="#12233d"/>
-          <ellipse cx="160" cy="540" rx="14" ry="18" fill="#12233d"/>
-          <circle cx="101" cy="533" r="4.5" fill="#fff"/>
-          <circle cx="165" cy="533" r="4.5" fill="#fff"/>
+          <ellipse cx="96" cy="532" rx="14" ry="18" fill="#12233d"/>
+          <ellipse cx="160" cy="532" rx="14" ry="18" fill="#12233d"/>
+          <circle cx="101" cy="525" r="4.5" fill="#fff"/>
+          <circle cx="165" cy="525" r="4.5" fill="#fff"/>
         </g>
 
         <g id="mouthGrp">
-          <ellipse id="mouth" cx="128" cy="618" rx="46" ry="4" fill="#12233d"/>
-          <ellipse id="tongue" cx="128" cy="640" rx="26" ry="0" fill="#e26a63" opacity="0"/>
+          <path id="mouth" d="" fill="#12233d"/>
+          <ellipse id="tongue" cx="128" cy="640" rx="46" ry="0" fill="#e26a63" opacity="0"/>
         </g>
       </g>
 
@@ -561,12 +561,21 @@ function frame(){
   vWide += ((touching && sing ? vWideT : 1) - vWide) * .2;
   const open = Math.max(squeeze, vOpen * .9);
 
-  const ry = 3 + open * 40;
-  mouthEl.setAttribute("ry", ry.toFixed(2));
-  mouthEl.setAttribute("rx", ((46 - open * 8) * vWide).toFixed(2));
-  tongue.setAttribute("rx", (26 * vWide).toFixed(1));
-  tongue.setAttribute("ry", (open * 13).toFixed(2));
-  tongue.setAttribute("cy", (618 + ry * .48).toFixed(2));
+  const mx = 128, my = 602 + open * 8;
+  const w   = (92 - open * 14) * vWide;   /* half width  */
+  const h   = 4 + open * 54;              /* half height */
+  const sag = 9 - open * 3;               /* middle sits below the corners → smile */
+  const yM  = my + sag, top = yM - h, bot = yM + h;
+  const kw  = w * .5523, kh = h * .8;     /* round the corners instead of meeting in a point */
+  mouthEl.setAttribute("d",
+    `M ${(mx - w).toFixed(1)} ${my.toFixed(1)} ` +
+    `C ${(mx - w).toFixed(1)} ${(my - kh).toFixed(1)} ${(mx - kw).toFixed(1)} ${top.toFixed(1)} ${mx} ${top.toFixed(1)} ` +
+    `C ${(mx + kw).toFixed(1)} ${top.toFixed(1)} ${(mx + w).toFixed(1)} ${(my - kh).toFixed(1)} ${(mx + w).toFixed(1)} ${my.toFixed(1)} ` +
+    `C ${(mx + w).toFixed(1)} ${(my + kh).toFixed(1)} ${(mx + kw).toFixed(1)} ${bot.toFixed(1)} ${mx} ${bot.toFixed(1)} ` +
+    `C ${(mx - kw).toFixed(1)} ${bot.toFixed(1)} ${(mx - w).toFixed(1)} ${(my + kh).toFixed(1)} ${(mx - w).toFixed(1)} ${my.toFixed(1)} Z`);
+  tongue.setAttribute("cy", (yM + open * 20).toFixed(1));
+  tongue.setAttribute("rx", ((30 + open * 16) * vWide).toFixed(1));
+  tongue.setAttribute("ry", (open * 20).toFixed(1));
   tongue.setAttribute("opacity", (Math.max(0, open - .18) * .95).toFixed(2));
 
   const sx = 1 - squeeze * .045, sy = 1 + squeeze * .04;
