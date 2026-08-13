@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>OTM-01 — Otamatone, product demonstration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0b1d3d; --print:#123a86; --line:#3a6cc4;
+  --paper:#e7dfcc; --body:#f7f2e6; --stamp:#dc3c26; --dim:#8fabd8;
+  --disp:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background-color:var(--ink);
+  background-image:linear-gradient(180deg,#0f2650 0%,#0a1932 100%);
+  color:var(--paper);font-family:var(--disp);-webkit-font-smoothing:antialiased;
+  overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none;
+}
+.grid{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(58,108,196,.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(58,108,196,.16) 1px,transparent 1px),
+    linear-gradient(rgba(58,108,196,.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(58,108,196,.07) 1px,transparent 1px);
+  background-size:96px 96px,96px 96px,16px 16px,16px 16px;
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 45%,#000 30%,transparent 100%);
+  mask-image:radial-gradient(120% 90% at 50% 45%,#000 30%,transparent 100%);
+}
+/* sung syllables printing across the sheet */
+.lyrics{
+  position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  display:flex;align-items:flex-start;padding:3vh 4vw;
+}
+.lyrics .flow{
+  width:100%;font-family:var(--disp);font-weight:900;
+  font-size:clamp(21px,3.3vw,42px);line-height:1.34;letter-spacing:.01em;
+  word-break:normal;
+}
+.lyrics .word{white-space:nowrap}
+.lyrics .syl{
+  display:inline-block;animation:typein .16s ease-out both;
+  transition:color .9s ease,text-shadow .9s ease;
+}
+.lyrics .syl.ghost{color:rgba(143,171,216,.10)}   /* not sung yet */
+.lyrics .syl.inked{color:rgba(143,171,216,.30)}   /* already sung */
+.lyrics .syl.hot{color:rgba(220,60,38,.95);text-shadow:0 0 26px rgba(220,60,38,.45);transition:none}
+@keyframes typein{from{opacity:0;transform:translateY(-.16em)}to{opacity:1;transform:none}}
+.lyrics .caret{
+  display:inline-block;width:.46em;height:.92em;vertical-align:-.1em;margin-left:.1em;
+  background:rgba(220,60,38,.6);animation:blink 1.05s steps(1) infinite;
+}
+@keyframes blink{50%{opacity:0}}
+.stage{position:relative;z-index:1;height:100dvh;display:flex;flex-direction:column}
+
+.rail{
+  display:flex;align-items:center;gap:14px;padding:10px 18px;
+  border-bottom:1px solid rgba(143,171,216,.28);
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+  color:var(--dim);text-transform:uppercase;flex:0 0 auto;
+  background:rgba(11,29,61,.72);backdrop-filter:blur(2px);
+}
+.rail .mark{font-family:var(--disp);font-weight:900;letter-spacing:.34em;color:var(--paper);font-size:12px}
+.rail .sep{color:var(--line)}
+.rail .right{margin-left:auto;display:flex;gap:14px;align-items:center}
+.led{width:7px;height:7px;border-radius:50%;background:#2b4d8c;box-shadow:0 0 0 1px rgba(143,171,216,.4);display:inline-block;margin-right:6px;transition:.12s}
+.led.on{background:var(--stamp);box-shadow:0 0 10px var(--stamp),0 0 0 1px rgba(220,60,38,.5)}
+
+.floor{flex:1 1 auto;position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
+svg.otm{height:100%;max-height:100%;width:auto;max-width:100%;display:block;overflow:visible;touch-action:none}
+.hit{cursor:ns-resize;fill:transparent}
+.head-hit{cursor:pointer;fill:transparent}
+
+.panel{
+  flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:10px 8px;padding:12px 16px 16px;border-top:1px solid rgba(143,171,216,.28);
+  background:linear-gradient(180deg,rgba(11,29,61,.82),rgba(11,29,61,.62));
+}
+.grp{display:flex;align-items:center;gap:6px}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
+button.sw{
+  font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--paper);
+  background:rgba(58,108,196,.16);border:1px solid rgba(143,171,216,.45);border-radius:2px;
+  padding:8px 12px;cursor:pointer;transition:.14s;text-transform:uppercase;
+}
+button.sw:hover{background:rgba(58,108,196,.34)}
+button.sw:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+button.sw[aria-pressed="true"]{background:var(--stamp);border-color:var(--stamp);color:#fff}
+input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:2px;background:rgba(143,171,216,.5);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:1px;background:var(--paper);cursor:pointer;border:none}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:1px;background:var(--paper);border:none;cursor:pointer}
+input[type=range]:focus-visible{outline:2px solid var(--stamp);outline-offset:4px}
+.hint{width:100%;text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:#5f83bd;margin-top:2px}
+.hint kbd{font-family:var(--mono);border:1px solid rgba(143,171,216,.4);border-radius:2px;padding:1px 4px;color:var(--dim)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="lyrics" id="lyrics"><div class="flow" id="flow"><i class="caret" id="caret"></i></div></div>
+
+<div class="stage">
+  <div class="rail">
+    <span class="mark">明和電機</span>
+    <span class="sep">/</span><span>Otamatone</span>
+    <span class="sep">/</span><span>型番 OTM-01</span>
+    <span class="right">
+      <span><i class="led" id="ledPlay"></i>TONE</span>
+      <span><i class="led" id="ledMouth"></i>MOUTH</span>
+      <span><i class="led" id="ledVoice"></i>VOICE</span>
+    </span>
+  </div>
+
+  <div class="floor" id="floor">
+    <svg class="otm" id="otm" viewBox="0 0 320 730" aria-label="Otamatone instrument">
+      <defs>
+        <linearGradient id="bodyG" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#fffdf6"/>
+          <stop offset="1" stop-color="#e4dbc6"/>
+        </linearGradient>
+        <linearGradient id="stemG" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#e2d8c2"/>
+          <stop offset=".38" stop-color="#fffdf6"/>
+          <stop offset="1" stop-color="#d9cfb8"/>
+        </linearGradient>
+        <radialGradient id="beadG">
+          <stop offset="0" stop-color="#fff2ee"/>
+          <stop offset=".45" stop-color="#ff6a4d"/>
+          <stop offset="1" stop-color="#dc3c26" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
+        <clipPath id="ribbonClip"><rect x="211" y="60" width="38" height="442" rx="19"/></clipPath>
+      </defs>
+
+      <ellipse cx="150" cy="698" rx="112" ry="11" fill="#04122a" opacity=".55"/>
+
+      <rect x="200" y="30" width="60" height="540" rx="30" fill="url(#stemG)"/>
+      <rect x="200" y="30" width="60" height="540" rx="30" fill="none" stroke="#c3b89e" stroke-width="1.5"/>
+
+      <rect x="211" y="60" width="38" height="442" rx="19" fill="#1a2b45"/>
+      <rect x="211" y="60" width="38" height="442" rx="19" fill="none" stroke="#0e1a2c" stroke-width="2"/>
+      <g id="frets" clip-path="url(#ribbonClip)"></g>
+      <g id="fretLabels"></g>
+
+      <g id="bead" opacity="0">
+        <circle cx="230" cy="480" r="30" fill="url(#beadG)" filter="url(#soft)"/>
+        <circle cx="230" cy="480" r="9.5" fill="#ff7a5c"/>
+        <circle cx="230" cy="480" r="4" fill="#fff3ef"/>
+      </g>
+
+      <g id="headGrp">
+        <g id="rings" opacity="0" stroke="#f7f2e6" fill="none" stroke-linecap="round" stroke-width="3">
+          <path d="M18 596 a34 34 0 0 0 0 -46" opacity=".9"/>
+          <path d="M2 610 a56 56 0 0 0 0 -74" opacity=".55"/>
+        </g>
+
+        <ellipse cx="145" cy="575" rx="125" ry="110" fill="url(#bodyG)"/>
+        <ellipse cx="145" cy="575" rx="125" ry="110" fill="none" stroke="#c3b89e" stroke-width="1.5"/>
+        <ellipse cx="104" cy="512" rx="42" ry="24" fill="#ffffff" opacity=".65" transform="rotate(-18 104 512)"/>
+
+        <ellipse cx="52" cy="600" rx="26" ry="20" fill="#f0b3a4" opacity=".55"/>
+        <ellipse cx="200" cy="606" rx="26" ry="20" fill="#f0b3a4" opacity=".55"/>
+
+        <g id="eyes">
+          <ellipse cx="96" cy="540" rx="14" ry="18" fill="#12233d"/>
+          <ellipse cx="160" cy="540" rx="14" ry="18" fill="#12233d"/>
+          <circle cx="101" cy="533" r="4.5" fill="#fff"/>
+          <circle cx="165" cy="533" r="4.5" fill="#fff"/>
+        </g>
+
+        <g id="mouthGrp">
+          <ellipse id="mouth" cx="128" cy="618" rx="46" ry="4" fill="#12233d"/>
+          <ellipse id="tongue" cx="128" cy="640" rx="26" ry="0" fill="#e26a63" opacity="0"/>
+        </g>
+      </g>
+
+      <rect class="hit" id="ribbonHit" x="192" y="62" width="76" height="438"/>
+      <ellipse class="head-hit" id="headHit" cx="145" cy="575" rx="125" ry="110"/>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="grp">
+      <span class="tag">Octave</span>
+      <button class="sw" id="octDown" aria-label="Octave down">−</button>
+      <button class="sw" id="octUp" aria-label="Octave up">+</button>
+      <span class="tag" id="rangeOut">C4–C6</span>
+    </div>
+    <div class="grp">
+      <button class="sw" id="snap" aria-pressed="false">Snap semitones</button>
+      <button class="sw" id="wobble" aria-pressed="false">Wobble</button>
+      <button class="sw" id="voice" aria-pressed="true">Sing</button>
+      <button class="sw" id="random" aria-pressed="false">Random</button>
+      <button class="sw" id="clear">Clear sheet</button>
+    </div>
+    <div class="grp">
+      <span class="tag">Volume</span>
+      <input type="range" id="vol" min="0" max="100" value="72" aria-label="Volume">
+    </div>
+    <div class="hint">
+      Every note sings the next syllable of “I am a therapeutic machine” · Random shuffles the word order ·
+      slide the neck for pitch · hold the face for the wah ·
+      <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>… notes · <kbd>space</kbd> mouth
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ── constants ───────────────────────────── */
+const RANGE = 24, RIB_TOP = 62, RIB_H = 438;
+const NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+
+/* vowel formants [F1,F2,F3] + how the mouth looks saying it */
+const V = {
+  a  : {f:[730,1090,2440], o:1.00, w:1.00},
+  ae : {f:[660,1720,2410], o:.86,  w:1.12},
+  uh : {f:[500,1500,2500], o:.52,  w:.95},
+  er : {f:[490,1350,1690], o:.46,  w:.88},
+  ih : {f:[390,1990,2550], o:.38,  w:1.06},
+  ee : {f:[270,2290,3010], o:.30,  w:1.16},
+  oo : {f:[300,870,2240],  o:.28,  w:.60},
+  m  : {f:[250,1100,2300], o:.05,  w:.80, nasal:1},
+  n  : {f:[280,1700,2600], o:.08,  w:.86, nasal:1}
+};
+/* "I am a therapeutic machine" — one syllable per note */
+const WORDS = [["I"],["am"],["a"],["ther","a","peu","tic"],["ma","chine"]];
+const PHRASE = [
+  {t:"I",     w:0,si:0, sus:"a",  pre:[],                          coda:[{v:"ee",d:.16}]},
+  {t:"am",    w:1,si:0, sus:"ae", pre:[],                          coda:[{v:"m", d:.18}]},
+  {t:"a",     w:2,si:0, sus:"uh", pre:[],                          coda:[]},
+  {t:"ther",  w:3,si:0, sus:"er", pre:[{fric:1800,q:1.2,g:.16,d:.10}], coda:[]},
+  {t:"a",     w:3,si:1, sus:"uh", pre:[],                          coda:[]},
+  {t:"peu",   w:3,si:2, sus:"oo", pre:[{stop:1,d:.05},{burst:900,q:1.6,g:.30,d:.02},{v:"ee",d:.05}], coda:[]},
+  {t:"tic",   w:3,si:3, sus:"ih", pre:[{stop:1,d:.045},{burst:3000,q:1.4,g:.30,d:.02}], coda:[{stop:1,d:.05},{burst:1900,q:1.4,g:.22,d:.03}]},
+  {t:"ma",    w:4,si:0, sus:"uh", pre:[{v:"m",d:.11}],             coda:[]},
+  {t:"chine", w:4,si:1, sus:"ee", pre:[{fric:2600,q:1.6,g:.26,d:.10}], coda:[{v:"n",d:.18}]}
+];
+
+/* syllables grouped by word, so a word always lands whole */
+const WORDSYL = WORDS.map((_, w) => PHRASE.filter(p => p.w === w));
+
+/* ── state ───────────────────────────────── */
+let base = 60, snap = false, wobble = false, sing = true, random = false;
+let touching = false, semi = 0;
+let squeeze = 0, mouthHeld = false, mouthDragStart = 0, mouthDragY = 0;
+let vOpen = 0, vWide = 1, vOpenT = 0, vWideT = 1;
+
+let pw = 0, ps = 0, bag = [];
+function nextWordIdx(cur){
+  if (!random) return (cur + 1) % WORDS.length;
+  if (!bag.length){                      /* shuffle bag: every word before any repeat */
+    bag = WORDS.map((_, i) => i);
+    for (let i = bag.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    if (bag.length > 1 && bag[0] === cur){ const t = bag[0]; bag[0] = bag[1]; bag[1] = t; }
+  }
+  return bag.shift();
+}
+function takeSyllable(){
+  const s = WORDSYL[pw][ps];
+  if (++ps >= WORDSYL[pw].length){ ps = 0; pw = nextWordIdx(pw); }
+  return s;
+}
+
+/* ── audio ───────────────────────────────── */
+let ac, out, oscA, oscB, sub, voiceG, noiseG, noiseBP, F = [], FG = [], body, lp, amp;
+let seqT = null, started = false;
+
+function boot(){
+  if (started) return; started = true;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  out = ac.createGain(); out.gain.value = +document.getElementById("vol").value / 100;
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4; comp.release.value = .25;
+  out.connect(comp); comp.connect(ac.destination);
+
+  amp = ac.createGain(); amp.gain.value = 0;
+  lp  = ac.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 3; lp.frequency.value = 1400;
+  lp.connect(amp); amp.connect(out);
+
+  /* glottal source */
+  const src = ac.createGain(); src.gain.value = 1;
+  oscA = ac.createOscillator(); oscA.type = "sawtooth";
+  oscB = ac.createOscillator(); oscB.type = "sawtooth"; oscB.detune.value = 9;
+  sub  = ac.createOscillator(); sub.type = "triangle";
+  const subG = ac.createGain(); subG.gain.value = .45;
+  oscA.connect(src); oscB.connect(src); sub.connect(subG); subG.connect(src);
+
+  voiceG = ac.createGain(); voiceG.gain.value = 1;
+  src.connect(voiceG);
+
+  /* parallel formant bank = the vocal tract */
+  const amps = [.9, .5, .22], bws = [90, 110, 160];
+  for (let i = 0; i < 3; i++){
+    const bp = ac.createBiquadFilter(); bp.type = "bandpass";
+    bp.frequency.value = 500; bp.Q.value = 500 / bws[i];
+    const g = ac.createGain(); g.gain.value = amps[i];
+    voiceG.connect(bp); bp.connect(g); g.connect(lp);
+    F.push(bp); FG.push(g);
+  }
+  /* a little chest body so it isn't all formant */
+  body = ac.createBiquadFilter(); body.type = "lowpass"; body.frequency.value = 320; body.Q.value = .7;
+  const bodyG = ac.createGain(); bodyG.gain.value = .55;
+  voiceG.connect(body); body.connect(bodyG); bodyG.connect(lp);
+
+  /* breath / consonant noise */
+  const len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const ns = ac.createBufferSource(); ns.buffer = buf; ns.loop = true;
+  noiseBP = ac.createBiquadFilter(); noiseBP.type = "bandpass"; noiseBP.frequency.value = 2200; noiseBP.Q.value = 1.4;
+  noiseG = ac.createGain(); noiseG.gain.value = 0;
+  ns.connect(noiseBP); noiseBP.connect(noiseG); noiseG.connect(lp);
+
+  const vib = ac.createOscillator(); vib.type = "sine"; vib.frequency.value = 5.4;
+  const vibAmt = ac.createGain(); vibAmt.gain.value = 8; vib.connect(vibAmt);
+  vibAmt.connect(oscA.detune); vibAmt.connect(oscB.detune); vibAmt.connect(sub.detune);
+
+  [oscA, oscB, sub, ns, vib].forEach(o => o.start());
+  setVowel("uh", .001); setPitch(midi(), 0);
+}
+function resume(){ boot(); if (ac.state === "suspended") ac.resume(); }
+const midi = () => base + semi;
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function setPitch(m, glide = .02){
+  if (!started) return;
+  const f = hz(m), t = ac.currentTime;
+  oscA.frequency.setTargetAtTime(f, t, glide);
+  oscB.frequency.setTargetAtTime(f, t, glide);
+  sub.frequency.setTargetAtTime(f / 2, t, glide);
+}
+
+/* articulation */
+function setVowel(name, tc = .012){
+  const v = V[name] || V.uh, t = ac.currentTime;
+  const lift = 1 + squeeze * .22;                 /* squeezing the face opens the tract */
+  for (let i = 0; i < 3; i++){
+    const f = v.f[i] * (i === 0 ? lift : 1);
+    F[i].frequency.setTargetAtTime(f, t, tc);
+    F[i].Q.setTargetAtTime(f / (v.nasal ? 60 : [90,110,160][i]), t, tc);
+    FG[i].gain.setTargetAtTime([.9,.5,.22][i] * (v.nasal ? .5 : 1), t, tc);
+  }
+  voiceG.gain.setTargetAtTime(v.nasal ? .55 : 1, t, tc);
+  noiseG.gain.setTargetAtTime(0, t, .01);
+  vOpenT = v.o; vWideT = v.w;
+}
+function applySeg(s){
+  const t = ac.currentTime;
+  if (s.v) return setVowel(s.v);
+  if (s.stop){ voiceG.gain.setTargetAtTime(0, t, .006); noiseG.gain.setTargetAtTime(0, t, .006); vOpenT = .12; return; }
+  if (s.fric || s.burst){
+    const f = s.fric || s.burst;
+    noiseBP.frequency.setTargetAtTime(f, t, .005);
+    noiseBP.Q.setTargetAtTime(s.q, t, .005);
+    noiseG.gain.setTargetAtTime(s.g, t, .006);
+    voiceG.gain.setTargetAtTime(s.fric ? .05 : 0, t, .006);
+    vOpenT = s.burst ? .5 : .3;
+  }
+}
+function runSeq(list, done){
+  clearTimeout(seqT);
+  let i = 0;
+  (function step(){
+    if (i >= list.length){ done && done(); return; }
+    const s = list[i++]; applySeg(s);
+    seqT = setTimeout(step, s.d * 1000);
+  })();
+}
+
+/* ── note events ─────────────────────────── */
+function noteOn(newSyllable){
+  if (!started) return;
+  const t = ac.currentTime;
+  amp.gain.cancelScheduledValues(t);
+  amp.gain.setTargetAtTime(level(), t, .014);
+  if (!sing){ clearTimeout(seqT); setVowel("a"); return; }
+  if (newSyllable){
+    const s = takeSyllable();
+    printSyl(s);
+    runSeq(s.pre, () => setVowel(s.sus, .03));
+    current = s;
+  }
+}
+let current = null;
+function noteOff(){
+  if (!started) return;
+  const finish = () => { const t = ac.currentTime; amp.gain.cancelScheduledValues(t); amp.gain.setTargetAtTime(0, t, .05); };
+  if (sing && current && current.coda.length){
+    const dur = current.coda.reduce((a, s) => a + s.d, 0);
+    runSeq(current.coda, finish);
+    setTimeout(finish, dur * 1000);
+  } else finish();
+  current = null;
+}
+const level = () => .42 + .58 * squeeze;
+function wah(){
+  if (!started) return;
+  const t = ac.currentTime;
+  lp.frequency.setTargetAtTime(700 + 5200 * Math.pow(squeeze, 1.3), t, .04);
+  if (touching) amp.gain.setTargetAtTime(level(), t, .06);
+}
+
+/* ── dom ─────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const ribbonHit = $("ribbonHit"), headHit = $("headHit"), bead = $("bead");
+const beadNodes = bead.querySelectorAll("circle");
+const mouthEl = $("mouth"), tongue = $("tongue"), headGrp = $("headGrp"), rings = $("rings"), eyes = $("eyes");
+const ledPlay = $("ledPlay"), ledMouth = $("ledMouth"), ledVoice = $("ledVoice"), rangeOut = $("rangeOut");
+const flow = $("flow"), lyrics = $("lyrics"), caret = $("caret");
+const SVGNS = "http://www.w3.org/2000/svg";
+
+/* the sentence typing itself down the sheet: the whole word lands as a ghost,
+   then inks in syllable by syllable as it gets sung */
+let curWord = null, hotSyl = null;
+function resetSheet(){
+  flow.innerHTML = ""; flow.appendChild(caret);
+  curWord = null; hotSyl = null;
+}
+function printSyl(s){
+  if (s.si === 0){
+    if (flow.scrollHeight > lyrics.clientHeight - 30) resetSheet();
+    if (flow.childNodes.length > 1) flow.insertBefore(document.createTextNode(" "), caret);
+    const wsp = document.createElement("span");
+    wsp.className = "word";
+    WORDS[s.w].forEach(txt => {
+      const y = document.createElement("span");
+      y.className = "syl ghost"; y.textContent = txt;
+      wsp.appendChild(y);
+    });
+    flow.insertBefore(wsp, caret);
+    curWord = wsp;
+  }
+  if (hotSyl){ hotSyl.classList.remove("hot"); hotSyl.classList.add("inked"); }
+  const el = curWord && curWord.children[s.si];
+  if (el){ el.classList.remove("ghost"); el.classList.add("hot"); hotSyl = el; }
+}
+
+function drawFrets(){
+  const f = $("frets"), l = $("fretLabels");
+  f.innerHTML = ""; l.innerHTML = "";
+  for (let i = 0; i <= RANGE; i++){
+    const y = RIB_TOP + RIB_H - (i / RANGE) * RIB_H;
+    const oct = (base + i) % 12 === 0;
+    const r = document.createElementNS(SVGNS, "rect");
+    r.setAttribute("x", 211); r.setAttribute("y", y - (oct ? 1.2 : .6));
+    r.setAttribute("width", 38); r.setAttribute("height", oct ? 2.4 : 1.2);
+    r.setAttribute("fill", oct ? "#dc3c26" : "#3f5a86");
+    f.appendChild(r);
+    if (oct || (base + i) % 12 === 7){
+      const t = document.createElementNS(SVGNS, "text");
+      t.setAttribute("x", 196); t.setAttribute("y", y + 4); t.setAttribute("text-anchor", "end");
+      t.setAttribute("font-family", "DM Mono, monospace"); t.setAttribute("font-size", "11");
+      t.setAttribute("fill", oct ? "#dc3c26" : "#5f83bd");
+      t.textContent = NAMES[(base + i) % 12] + (Math.floor((base + i) / 12) - 1);
+      l.appendChild(t);
+    }
+  }
+  rangeOut.textContent = NAMES[base % 12] + (Math.floor(base / 12) - 1) + "–" +
+    NAMES[(base + RANGE) % 12] + (Math.floor((base + RANGE) / 12) - 1);
+}
+function moveBead(s){
+  const y = RIB_TOP + RIB_H - (s / RANGE) * RIB_H;
+  beadNodes.forEach(c => c.setAttribute("cy", y));
+}
+
+/* ── ribbon ──────────────────────────────── */
+function semiFromY(y){
+  const r = ribbonHit.getBoundingClientRect();
+  let t = 1 - (y - r.top) / r.height;
+  t = Math.max(0, Math.min(1, t));
+  const s = t * RANGE;
+  return snap ? Math.round(s) : s;
+}
+function press(y){
+  resume(); semi = semiFromY(y); touching = true;
+  setPitch(midi(), .005); noteOn(true);
+  bead.setAttribute("opacity","1"); ledPlay.classList.add("on"); moveBead(semi);
+}
+function slide(y){ if(!touching) return; semi = semiFromY(y); setPitch(midi(), snap ? .012 : .018); moveBead(semi); }
+function release(){
+  if (!touching) return;
+  touching = false; noteOff();
+  bead.setAttribute("opacity","0"); rings.setAttribute("opacity","0"); ledPlay.classList.remove("on");
+}
+ribbonHit.addEventListener("pointerdown", e => { e.preventDefault(); ribbonHit.setPointerCapture(e.pointerId); press(e.clientY); });
+ribbonHit.addEventListener("pointermove", e => { if (touching) slide(e.clientY); });
+["pointerup","pointercancel","lostpointercapture"].forEach(ev => ribbonHit.addEventListener(ev, release));
+
+/* ── mouth ───────────────────────────────── */
+function openMouth(y){ resume(); mouthHeld = true; mouthDragStart = y; mouthDragY = y; ledMouth.classList.add("on"); }
+function closeMouth(){ mouthHeld = false; ledMouth.classList.remove("on"); }
+headHit.addEventListener("pointerdown", e => { e.preventDefault(); headHit.setPointerCapture(e.pointerId); openMouth(e.clientY); });
+headHit.addEventListener("pointermove", e => { if (mouthHeld) mouthDragY = e.clientY; });
+["pointerup","pointercancel","lostpointercapture"].forEach(ev => headHit.addEventListener(ev, closeMouth));
+
+/* ── keyboard ────────────────────────────── */
+const KEYS = {a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12,o:13,l:14,p:15,";":16};
+let held = [];
+addEventListener("keydown", e => {
+  if (e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === " "){ e.preventDefault(); if(!mouthHeld){ openMouth(0); mouthDragStart = 0; mouthDragY = 0; } return; }
+  if (!(k in KEYS)) return;
+  e.preventDefault();
+  held = held.filter(x => x !== k); held.push(k);
+  resume(); semi = KEYS[k]; touching = true;
+  setPitch(midi(), .008); noteOn(true);
+  bead.setAttribute("opacity","1"); ledPlay.classList.add("on"); moveBead(semi);
+});
+addEventListener("keyup", e => {
+  const k = e.key.toLowerCase();
+  if (k === " "){ closeMouth(); return; }
+  if (!(k in KEYS)) return;
+  held = held.filter(x => x !== k);
+  if (held.length){ semi = KEYS[held[held.length-1]]; setPitch(midi(), .008); moveBead(semi); }
+  else release();
+});
+
+/* ── controls ────────────────────────────── */
+$("octUp").onclick = () => { base = Math.min(84, base + 12); drawFrets(); if(touching) setPitch(midi(),.01); };
+$("octDown").onclick = () => { base = Math.max(36, base - 12); drawFrets(); if(touching) setPitch(midi(),.01); };
+$("snap").onclick = e => { snap = !snap; e.currentTarget.setAttribute("aria-pressed", snap); };
+$("wobble").onclick = e => { wobble = !wobble; e.currentTarget.setAttribute("aria-pressed", wobble); };
+$("random").onclick = e => { random = !random; e.currentTarget.setAttribute("aria-pressed", random); bag = []; };
+$("voice").onclick = e => { sing = !sing; e.currentTarget.setAttribute("aria-pressed", sing); if (started && !sing) setVowel("a"); };
+$("clear").onclick = () => { resetSheet(); pw = 0; ps = 0; bag = []; };
+$("vol").oninput = e => { if (started) out.gain.setTargetAtTime(e.target.value/100, ac.currentTime, .02); };
+
+/* ── frame ───────────────────────────────── */
+let phase = 0;
+function frame(){
+  requestAnimationFrame(frame);
+  phase += .06;
+
+  let target = 0;
+  if (mouthHeld){ const drag = (mouthDragStart - mouthDragY) / 140; target = Math.max(.12, Math.min(1, .82 + drag)); }
+  if (wobble) target = Math.max(0, Math.min(1, target * .62 + .38 + Math.sin(phase * 1.9) * .3));
+  squeeze += (target - squeeze) * .22;
+  wah();
+
+  /* the mouth also shapes itself around whatever it is singing */
+  vOpen += ((touching && sing ? vOpenT : 0) - vOpen) * .3;
+  vWide += ((touching && sing ? vWideT : 1) - vWide) * .2;
+  const open = Math.max(squeeze, vOpen * .9);
+
+  const ry = 3 + open * 40;
+  mouthEl.setAttribute("ry", ry.toFixed(2));
+  mouthEl.setAttribute("rx", ((46 - open * 8) * vWide).toFixed(2));
+  tongue.setAttribute("rx", (26 * vWide).toFixed(1));
+  tongue.setAttribute("ry", (open * 13).toFixed(2));
+  tongue.setAttribute("cy", (618 + ry * .48).toFixed(2));
+  tongue.setAttribute("opacity", (Math.max(0, open - .18) * .95).toFixed(2));
+
+  const sx = 1 - squeeze * .045, sy = 1 + squeeze * .04;
+  headGrp.setAttribute("transform", `translate(145,575) scale(${sx.toFixed(4)},${sy.toFixed(4)}) translate(-145,-575)`);
+  eyes.setAttribute("opacity", (1 - squeeze * .12).toFixed(2));
+
+  if (touching){
+    const k = .85 + Math.sin(phase * 2.4) * .15;
+    rings.setAttribute("opacity", (.28 + Math.max(open, .2) * .55 * k).toFixed(2));
+  }
+  ledMouth.classList.toggle("on", squeeze > .25);
+  ledVoice.classList.toggle("on", sing && touching);
+}
+
+drawFrets(); moveBead(0); frame();
+addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("touchmove", e => { if (touching || mouthHeld) e.preventDefault(); }, {passive:false});
+})();
+</script>
+</body>
+</html>
