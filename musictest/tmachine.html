@@ -59,8 +59,30 @@ body{
 @keyframes blink{50%{opacity:0}}
 .stage{position:relative;z-index:1;height:100dvh;display:flex;flex-direction:column}
 
+/* collapsible chrome */
+.rail,.panel{
+  overflow:hidden;
+  transition:max-height .36s cubic-bezier(.4,0,.2,1),opacity .22s ease,
+             padding .36s cubic-bezier(.4,0,.2,1),border-color .3s ease;
+}
+.rail{max-height:60px}
+.panel{max-height:50vh}
+.stage.bare .rail,.stage.bare .panel{max-height:0;opacity:0;padding-top:0;padding-bottom:0;border-color:transparent}
+.chrome{
+  position:fixed;top:9px;right:14px;z-index:5;width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:rgba(11,29,61,.8);border:1px solid rgba(143,171,216,.45);border-radius:2px;
+  color:var(--dim);transition:.16s;padding:0;
+}
+.chrome:hover{background:rgba(58,108,196,.34);color:var(--paper)}
+.chrome:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+.chrome svg{width:18px;height:18px;fill:currentColor}
+.chrome rect{transition:transform .36s cubic-bezier(.4,0,.2,1)}
+.stage.bare~.chrome .b1{transform:translateY(4.5px)}
+.stage.bare~.chrome .b2{transform:translateY(-4.5px)}
+
 .rail{
-  display:flex;align-items:center;gap:14px;padding:10px 18px;
+  display:flex;align-items:center;gap:14px;padding:10px 58px 10px 18px;
   border-bottom:1px solid rgba(143,171,216,.28);
   font-family:var(--mono);font-size:11px;letter-spacing:.14em;
   color:var(--dim);text-transform:uppercase;flex:0 0 auto;
@@ -211,6 +233,14 @@ input[type=range]:focus-visible{outline:2px solid var(--stamp);outline-offset:4p
     </div>
   </div>
 </div>
+
+<button class="chrome" id="chrome" aria-pressed="false" aria-label="Hide panels" title="Hide panels (Esc)">
+  <svg viewBox="0 0 20 20" aria-hidden="true">
+    <rect class="b1" x="3" y="2.5" width="14" height="3" rx="1.5"/>
+    <rect x="3" y="9" width="14" height="2" rx="1" opacity=".4"/>
+    <rect class="b2" x="3" y="14.5" width="14" height="3" rx="1.5"/>
+  </svg>
+</button>
 
 <script>
 (() => {
@@ -517,6 +547,7 @@ let held = [];
 addEventListener("keydown", e => {
   if (e.repeat) return;
   const k = e.key.toLowerCase();
+  if (k === "escape"){ toggleChrome(); return; }
   if (k === " "){ e.preventDefault(); if(!mouthHeld){ openMouth(0); mouthDragStart = 0; mouthDragY = 0; } return; }
   if (!(k in KEYS)) return;
   e.preventDefault();
@@ -542,6 +573,14 @@ $("wobble").onclick = e => { wobble = !wobble; e.currentTarget.setAttribute("ari
 $("random").onclick = e => { random = !random; e.currentTarget.setAttribute("aria-pressed", random); bag = []; };
 $("voice").onclick = e => { sing = !sing; e.currentTarget.setAttribute("aria-pressed", sing); if (started && !sing) setVowel("a"); };
 $("clear").onclick = () => { resetSheet(); pw = 0; ps = 0; bag = []; };
+const stage = document.querySelector(".stage"), chromeBtn = $("chrome");
+function toggleChrome(){
+  const bare = stage.classList.toggle("bare");
+  chromeBtn.setAttribute("aria-pressed", bare);
+  chromeBtn.setAttribute("aria-label", bare ? "Show panels" : "Hide panels");
+  chromeBtn.title = (bare ? "Show panels" : "Hide panels") + " (Esc)";
+}
+chromeBtn.onclick = () => { toggleChrome(); chromeBtn.blur(); };
 $("vol").oninput = e => { if (started) out.gain.setTargetAtTime(e.target.value/100, ac.currentTime, .02); };
 
 /* ── frame ───────────────────────────────── */
